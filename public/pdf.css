@@ -1,0 +1,90 @@
+ @font-face {
+     font-family: "Amiri";
+     src: url('https://fonts.googleapis.com/css2?family=Amiri&display=swap');
+     font-weight: normal;
+     font-style: normal;
+ }
+
+ body {
+     font-family: 'Amiri', sans-serif;
+     direction: rtl;
+     text-align: right;
+     line-height: 1.8;
+     font-size: 14px;
+     margin: 40px;
+     background-color: #fff;
+     color: #000;
+     -webkit-print-color-adjust: exact;
+     print-color-adjust: exact;
+ }
+
+ h2 {
+     text-align: center;
+     margin-bottom: 30px;
+     font-size: 22px;
+     border-bottom: 2px solid #05b317;
+     color: #00800b;
+     padding-bottom: 10px;
+ }
+
+ .section {
+     margin-bottom: 25px;
+ }
+
+ .section p {
+     margin: 4px 0;
+ }
+
+ .table {
+     width: 100%;
+     border: 1px solid #444;
+     border-collapse: collapse;
+     margin-top: 10px;
+ }
+
+ .table th,
+ .table td {
+     border: 1px solid #444;
+     padding: 8px;
+     text-align: center;
+     vertical-align: middle;
+ }
+
+ .table th {
+     background-color: #aef1b4;
+     color: #00800b;
+     font-weight: bold;
+ }
+
+ ul {
+     margin: 0;
+     padding-right: 20px;
+ }
+
+ .signature-section {
+     display: flex;
+     justify-content: space-between;
+     margin-top: 50px;
+ }
+
+ .signature-section div {
+     width: 45%;
+     text-align: center;
+ }
+
+ .note-box {
+     padding: 10px;
+     border: 1px dashed #00800b;
+     background-color: #aef1b4;
+ }
+
+ .highlight {
+     background-color: #aef1b4;
+ }
+
+ @media print {
+     body {
+         -webkit-print-color-adjust: exact !important;
+         print-color-adjust: exact !important;
+     }
+ }
