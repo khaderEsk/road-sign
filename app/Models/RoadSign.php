@@ -18,7 +18,10 @@ class RoadSign extends Model
         'place',
         'directions',
         'panels_number',
-        'faces_number'
+        'faces_number',
+        'latitudeX',
+        'longitudeY',
+        'img'
 
     ];
 

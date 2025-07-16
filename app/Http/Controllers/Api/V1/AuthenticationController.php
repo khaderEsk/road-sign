@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CustomerLoginRequest;
 use App\Http\Requests\CustomerRequest;
+use App\Http\Requests\ResendVerifyRequest;
 use App\Http\Requests\UpdateProfileRequest;
+use App\Http\Requests\VerifyRequest;
+use App\Models\Customer;
 use App\Services\AuthenticationService;
 use Illuminate\Http\Request;
 
@@ -37,5 +40,14 @@ class AuthenticationController extends Controller
     public function updateProfile(CustomerRequest $request)
     {
         return $this->authenticationService->UpdateProfile($request->validated());
+    }
+    public function verify(VerifyRequest $request)
+    {
+        return $this->authenticationService->verify($request->validated());
+    }
+
+    public function resendOtp(ResendVerifyRequest $request)
+    {
+        return $this->authenticationService->resendOtp($request->validated());
     }
 }

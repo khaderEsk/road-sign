@@ -17,7 +17,7 @@ class BookingCustomerRequest extends FormRequest
     protected function prepareForValidation()
     {
         $this->merge([
-            'user_id' => 1,
+            'user_id' => 2,
             'customer_id' => auth('customer')->user()->id,
         ]);
     }

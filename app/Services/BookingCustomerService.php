@@ -20,20 +20,26 @@ class BookingCustomerService extends Services
         private RoadSignService $roadSignService,
         private PaymentService $paymentService
     ) {}
-    
+
     public function getAll()
     {
         try {
             $customer = auth('customer')->user();
-            $booking = Booking::where('customer_id', $customer->id)
-                ->with([
-                    'roadsigns.city',
-                    'roadsigns.region',
-                    'customer',
-                    'roadsigns.template'
-                ])
-                ->orderbyDesc('created_at')->get();
-            return $this->returnData($booking, 'تمت العملية بنجاح');
+            if (!$customer) {
+                return $this->returnError(503, 'خطأ في المصادقة');
+            }
+            $customer->load(['bookings.roadSigns', 'bookings.roadSigns.city', 'bookings.roadSigns.region', 'bookings.roadSigns.template', 'bookings.roadSigns.template.products']);
+
+            $bookings = $customer->getRelation('bookings');
+            // $booking = Booking::where('customer_id', $customer->id)
+            //     ->with([
+            //         'roadsigns.city',
+            //         'roadsigns.region',
+            //         'roadsigns.template',
+            //         'roadsigns.template.products',
+            //     ])
+            //     ->orderbyDesc('created_at')->get();
+            return $this->returnData($bookings, 'تمت العملية بنجاح');
         } catch (\Throwable $e) {
             return $this->returnError($e->getCode(), $e->getMessage());
         }
@@ -150,6 +156,7 @@ class BookingCustomerService extends Services
             if ($booking->type->value === BookingType::PERMANENT->value) {
                 $this->orderService->createInstallationAndReleaseOrders($booking);
                 $this->updateCustomerBalance($booking);
+                $booking;
             }
             return $booking->load('roadsigns');
         });
@@ -259,7 +266,7 @@ class BookingCustomerService extends Services
         return $pivotData;
     }
 
-    private function updateCustomerBalance(Booking $booking, $type = BalanceType::INCREMENT, $originalPrice = 0): void
+    private function updateCustomerBalance(Booking $booking, $type = BalanceType::INCREMENT, $originalPrice = 100): void
     {
         if ($type == BalanceType::INCREMENT) {
             $booking->customer->decrement('remaining', $originalPrice);

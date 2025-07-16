@@ -12,7 +12,10 @@ class Company extends Model
         'address',
         'description',
         'about_us',
-        'contract_note'
+        'contract_note',
+        'latitudeX',
+        'longitudeY',
+        'img',
     ];
 
     public function users()

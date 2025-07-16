@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\CustomerType;
 use App\GeneralTrait;
+use App\Mail\CustomerVerificationEmail;
 use App\Models\Customer;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -20,34 +22,98 @@ class AuthenticationService extends Services
     {
         DB::beginTransaction();
         try {
-            $rawPassword = $request['password'];
+            $otpCode = rand(100000, 999999);
             $request['password'] = Hash::make($request['password']);
+            $request['otp_code'] = $otpCode;
+            $request['otp_expires_at'] = now()->addMinutes(10);
             $customer = Customer::create($request);
             if (!empty($request['is_tracking']) && !empty($request['customer'])) {
                 $trackingData = $request['customer'];
+                $trackingData['email'] = $request['email'] ? $request['email'] : $customer->email;
                 $trackingData['company_name'] = $customer->company_name;
                 $trackingData['type'] = CustomerType::TRACKING;
                 $trackingData['belong_id'] = $customer->id;
-                $trackingData['password'] = Hash::make(Str::random(10));
+                $trackingData['password'] = $customer->password;
+                $trackingData['otp_code'] = $otpCode;
+                $trackingData['otp_expires_at'] = now()->addMinutes(10);
                 Customer::create($trackingData);
             }
-            $credentials = [
-                'company_name' => $customer->company_name,
-                'password' => $rawPassword
-            ];
-            if (!$token = auth('customer')->attempt($credentials)) {
-                throw new \Exception('فشل تسجيل الدخول للعميل');
-            }
-            $customer->token = $token;
-            $customer->assignRole('customer');
-            $customer->loadMissing(['roles']);
+
+            $customer->otp_code = $otpCode;
+            $customer->otp_expires_at = now()->addMinutes(10);
+            $customer->save();
+            Mail::to($customer->email)->send(new CustomerVerificationEmail([
+                'name' => $customer->name,
+                'otp' => $otpCode,
+                'company_name' => $customer->company_name
+            ]));
+
             DB::commit();
-            return $this->returnData($customer, 'تمت العملية بنجاح');
+            return $this->returnData($customer, 'تمت انشاء بنجاح، يجب فتح الإيميل وتأكيد الحساب');
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
         }
     }
+
+    public function verify(array $request)
+    {
+        DB::beginTransaction();
+        try {
+            $customer = Customer::where('email', $request['email'])
+                ->where('otp_code', $request['otp_code'])
+                ->where('otp_expires_at', '>', now())
+                ->first();
+            if (!$customer) {
+                return $this->returnError(401, 'كود التحقق غير صحيح أو منتهي الصلاحية');
+            }
+            if (!Hash::check($request['password'], $customer->password)) {
+                return $this->returnError(401, 'كلمة المرور غير صحيحة');
+            }
+            $customer->email_verified_at = now();
+            $customer->otp_code = null;
+            $customer->otp_expires_at = null;
+            $customer->save();
+            $credentials = [
+                'company_name' => $customer->company_name,
+                'password' => $request['password']
+            ];
+            $token = auth('customer')->attempt($credentials);
+            if (!$token) {
+                return $this->returnError(401, 'فشل تسجيل الدخول للعميل');
+            }
+            $customer->token = $token;
+            $customer->assignRole('customer');
+            $customer->loadMissing(['roles']);
+            DB::commit();
+            return $this->returnData($customer, 'تم تفعيل الحساب بنجاح!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->returnError($e->getCode(), $e->getMessage());
+        }
+    }
+
+    public function resendOtp(array $request)
+    {
+        DB::beginTransaction();
+        try {
+            $customer = Customer::where('email', $request['email'])->first();
+            if (!$customer) {
+                return $this->returnError(404, 'البريد الإلكتروني غير مسجل');
+            }
+            if ($customer->hasVerifiedEmail()) {
+                return $this->returnError(400, 'الحساب مفعل بالفعل');
+            }
+            $customer->sendVerificationEmail();
+            DB::commit();
+            return $this->returnData(200, 'تم إعادة إرسال كود التحقق');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->returnError($e->getCode(), $e->getMessage());
+        }
+    }
+
+
 
     public function login($request)
     {

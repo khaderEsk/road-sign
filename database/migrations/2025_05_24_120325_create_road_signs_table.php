@@ -23,6 +23,10 @@ return new class extends Migration
             $table->string('directions');
             $table->decimal('advertising_meters', 8, 2);
             $table->decimal('printing_meters', 8, 2);
+            $table->string('latitudeX');
+            $table->string('longitudeY');
+            $table->string('longitudeY');
+            $table->string('img');
             $table->timestamps();
         });
     }

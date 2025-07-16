@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\GeneralTrait;
 use App\Models\Customer;
 use App\Models\RoadSign;
 use App\Models\Template;
@@ -12,211 +13,79 @@ use Illuminate\Support\Facades\DB;
 
 class RoadSignService extends Services
 {
-    public function getAll(array $data)
+    use GeneralTrait;
+
+    public function getAllRoadSing()
     {
-        $roadsignsQuery = RoadSign::with(['template', 'city', 'region', 'bookings' => function ($q) use ($data) {
-            if (!empty($data['start_date'])) {
-                $q->wherePivot('start_date', '<=', $data['end_date'])
-                    ->wherePivot('end_date', '>=', $data['start_date']);
-            }
-        }])
-            ->join('templates', 'road_signs.template_id', '=', 'templates.id')
-            ->select('road_signs.*')
-            ->orderBy('templates.size', 'desc');
-
-        if (!empty($data['city_id'])) {
-            $roadsignsQuery->where('city_id', $data['city_id']);
+        try {
+            $customer = auth('customer')->user();
+            $roadSigns = RoadSign::with([
+                'region',
+                'city',
+                'template',
+                'template.products',
+            ])
+                ->when($customer, function ($query) {
+                    $query->join('cities', 'road_signs.city_id', '=', 'cities.id')
+                        // $query->join('regions', 'road_signs.region_id', '=', 'regions.id')
+                        ->orderBy('cities.name')
+                        ->orderBy('road_signs.created_at');
+                }, function ($query) {
+                    $query->orderBy('road_signs.created_at');
+                })
+                ->get();
+            return $this->returnData($roadSigns, 'تمت العملية بنجاح');
+        } catch (\Throwable $e) {
+            return $this->returnError($e->getTraceAsString(), $e->getMessage());
         }
-
-        if (!empty($data['region_id'])) {
-            $roadsignsQuery->where('region_id', $data['region_id']);
-        }
-
-        if (!empty($data['place'])) {
-            $roadsignsQuery->where('place', "like", "%" . $data['place'] . "%");
-        }
-
-        if (!empty($data['model'])) {
-            $roadsignsQuery->whereHas('template', function ($q) use ($data) {
-                return $q->where('model', $data['model']);
-            });
-        }
-
-        $roadsigns = $roadsignsQuery->orderByDesc('created_at')->get();
-
-        $roadsigns = $roadsigns->map(function ($roadSign) use ($data) {
-            $roadSign->total_faces_on_date = $roadSign->bookings->sum('pivot.booking_faces');
-            $roadSign->total_panels_on_date = $roadSign->bookings->sum('pivot.number_of_reserved_panels');
-
-            if (!empty($data['start_date']) && !empty($data['end_date'])) {
-                $ranges = $this->calculateDateRanges($roadSign, $data['start_date'], $data['end_date']);
-                $roadSign->available_date_ranges = $ranges['available_date_ranges'];
-                $roadSign->booking_dates = $ranges['booking_dates'];
-            } else {
-                $roadSign->available_date_ranges = [];
-                $roadSign->booking_dates = [];
-            }
-
-            return $roadSign;
-        });
-
-        return $roadsigns;
-    }
-    public static function calculateDateRanges(RoadSign $roadSign, $startDate, $endDate): array
-    {
-        $start = Carbon::parse($startDate)->startOfDay();
-        $end = Carbon::parse($endDate)->endOfDay();
-
-
-        $dailyReservedPanels = [];
-
-        foreach ($roadSign->bookings as $booking) {
-            $from = Carbon::parse($booking->pivot->start_date)->startOfDay();
-            $to = Carbon::parse($booking->pivot->end_date)->endOfDay();
-            $reserved = $booking->pivot->number_of_reserved_panels ?? 0;
-
-            for ($date = $from->copy(); $date->lte($to); $date->addDay()) {
-                $key = $date->toDateString();
-                if (!isset($dailyReservedPanels[$key])) {
-                    $dailyReservedPanels[$key] = 0;
-                }
-                $dailyReservedPanels[$key] += $reserved;
-            }
-        }
-
-
-        $availableDateRanges = [];
-        $currentStart = null;
-        $currentAvailable = null;
-
-        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
-            $key = $date->toDateString();
-            $reserved = $dailyReservedPanels[$key] ?? 0;
-            $available = max(0, $roadSign->panels_number - $reserved);
-
-            if ($available <= 0) {
-
-                if ($currentStart !== null) {
-                    $availableDateRanges[] = [
-                        'start_date' => $currentStart->toDateString(),
-                        'end_date' => $date->copy()->subDay()->toDateString(),
-                        'days' => $currentStart->diffInDays($date) <= 1 ? 1 : (int)$currentStart->diffInDays($date) + 1,
-                        'available_panels' => $currentAvailable
-                    ];
-                    $currentStart = null;
-                    $currentAvailable = null;
-                }
-                continue;
-            }
-
-            if ($currentStart === null) {
-                $currentStart = $date->copy();
-                $currentAvailable = $available;
-            } elseif ($available !== $currentAvailable) {
-
-                $availableDateRanges[] = [
-                    'start_date' => $currentStart->toDateString(),
-                    'end_date' => $date->copy()->subDay()->toDateString(),
-                    'days' => $currentStart->diffInDays($date) <= 1 ? 1 : (int)$currentStart->diffInDays($date) + 1,
-                    'available_panels' => $currentAvailable
-                ];
-                $currentStart = $date->copy();
-                $currentAvailable = $available;
-            }
-        }
-
-        if ($currentStart !== null) {
-            $availableDateRanges[] = [
-                'start_date' => $currentStart->toDateString(),
-                'end_date' => $end->toDateString(),
-                'days' => $currentStart->diffInDays($date) <= 1 ? 1 : (int)$currentStart->diffInDays($date) + 1,
-                'available_panels' => $currentAvailable
-            ];
-        }
-
-        $bookingRanges = collect($roadSign->bookings)->map(function ($booking) use ($start, $end) {
-            $from = Carbon::parse($booking->pivot->start_date)->startOfDay();
-            $to = Carbon::parse($booking->pivot->end_date)->endOfDay();
-
-            $effectiveStart = $from->greaterThan($start) ? $from : $start;
-            $effectiveEnd = $to->lessThan($end) ? $to : $end;
-
-            return [
-                'start_date' => $effectiveStart->toDateString(),
-                'end_date' => $effectiveEnd->toDateString(),
-                'days' => $effectiveStart->diffInDays($effectiveEnd) <= 1 ? 1 : (int)$effectiveStart->diffInDays($effectiveEnd) + 1,
-                'panels_reserved' => (int) $booking->pivot->number_of_reserved_panels ?? 0
-            ];
-        })->toArray();
-
-        return [
-            'available_date_ranges' => $availableDateRanges,
-            'booking_dates' => $bookingRanges
-        ];
     }
 
-
+    public function RoadSingSites()
+    {
+        try {
+            $roadSing = RoadSign::select('latitudeX', 'longitudeY')->get();
+            return $this->returnData($roadSing, 'تمت العملية بنجاح');
+        } catch (\Throwable $e) {
+            return $this->returnError($e->getTraceAsString(), $e->getMessage());
+        }
+    }
 
     public function getById($id)
     {
-        return RoadSign::with(['template', 'template.products', 'city', 'region'])->findOrFail($id);
-    }
-
-    public function getRoadSignsTemplate()
-    {
-        return RoadSign::with('template')
-            ->select(
-                DB::raw('templates.model as model'),
-                DB::raw('sum(road_signs.faces_number) as faces_number'),
-                DB::raw('sum(road_signs.panels_number) as count')
-            )
-            ->join('templates', 'road_signs.template_id', '=', 'templates.id')
-            ->groupBy('templates.model')
-            ->get();
-    }
-
-    public function create(array $data)
-    {
-        DB::beginTransaction();
         try {
-            $template = Template::query()->findOrFail($data['template_id']);
-            if ($template->faces_number == 2) {
-                $data['directions'] = $data['direction_one'];
-                $roadSignOne = RoadSign::create($data);
-                $data['directions'] = $data['direction_two'];
-                $this->logActivity('تم إنشاء علامة طريق في: ' . $roadSignOne->place . " بواسطة المستخدم: " . auth()->user()->username);
-                $roadSignTwo = RoadSign::create($data);
-                $roadSigns = [$roadSignOne, $roadSignTwo];
-                $this->logActivity('تم إنشاء علامة طريق في: ' . $roadSignTwo->place . " بواسطة المستخدم: " . auth()->user()->username);
-            } else {
-                $data['directions'] = $data['direction_one'];
-                $roadSign = RoadSign::create($data);
-                $this->logActivity('تم إنشاء علامة طريق في: ' . $roadSign->place . " بواسطة المستخدم: " . auth()->user()->username);
-                $roadSigns = [$roadSign];
+            $roadSing = RoadSign::with([
+                'region',
+                'city',
+                'template',
+                'template.products'
+            ])->find($id);
+            if (!$roadSing) {
+                return $this->returnError(404, 'الإعلان غير موجود، إدخال خاطئ');
             }
-            DB::commit();
-            return $roadSigns;
-        } catch (Exception $e) {
-            DB::rollBack();
-            return $e->getMessage();
+            return $this->returnData($roadSing, 'تمت العملية بنجاح');
+        } catch (\Throwable $e) {
+            return $this->returnError($e->getTraceAsString(), $e->getMessage());
         }
     }
 
-    public function update($id, array $data)
+    public function getRoadSingsFilter($request)
     {
-        $roadSign = RoadSign::findOrFail($id);
-        $roadSign->update($data);
-        $this->logActivity('تم تحديث علامة الطريق في: ' . $roadSign->place . " بواسطة المستخدم: " . auth()->user()->username);
-        return $roadSign;
+        try {
+            $roadSings = RoadSign::with([
+                'region',
+                'city',
+                'template',
+                'template.products'
+            ])->where('city_id', $request->city_id)->where('region_id', $request->region_id)->get();
+            if (!$roadSings) {
+                return $this->returnError(404, 'الإعلان غير موجود، إدخال خاطئ');
+            }
+            return $this->returnData($roadSings, 'تمت العملية بنجاح');
+        } catch (\Throwable $e) {
+            return $this->returnError($e->getTraceAsString(), $e->getMessage());
+        }
     }
 
-    public function delete($id)
-    {
-        $roadSign = RoadSign::findOrFail($id);
-        $this->logActivity('تم حذف علامة الطريق في: ' . $roadSign->place . " بواسطة المستخدم: " . auth()->user()->username);
-        $roadSign->delete();
-        return true;
-    }
 
     public function checkRoadSignIsAvilable(
         $road_sign_id,

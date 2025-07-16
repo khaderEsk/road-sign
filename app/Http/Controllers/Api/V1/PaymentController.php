@@ -12,20 +12,21 @@ use Illuminate\Routing\Controllers\Middleware;
 class PaymentController extends Controller
 {
     use ImageTrait;
-    public function __construct(protected PaymentService $paymentService)
+    public function __construct(protected PaymentService $paymentService) {}
+
+    public function index()
     {
-        return [
-            'role_or_permission:view-payments|create-payments|edit-payments|delete-payments',
-            new Middleware(\Spatie\Permission\Middleware\PermissionMiddleware::using('delete-payments'), only: ['destroy']),
-            new Middleware(\Spatie\Permission\Middleware\PermissionMiddleware::using('view-payments'), only: ['index', 'show']),
-            new Middleware(\Spatie\Permission\Middleware\PermissionMiddleware::using('edit-payments'), only: ['update']),
-            new Middleware(\Spatie\Permission\Middleware\PermissionMiddleware::using('create-payments'), only: ['store']),
-        ];
+        return $this->paymentService->getAll();
     }
 
-    public function index(Request $request)
+    public function getPaymentsUnaccepted()
     {
-        return response()->json($this->paymentService->getAll($request->all()));
+        return $this->paymentService->getPaymentsUnaccepted();
+    }
+
+    public function getPaymentsAccepted()
+    {
+        return $this->paymentService->getPaymentsAccepted();
     }
 
     public function store(PaymentRequest $request)
@@ -35,20 +36,16 @@ class PaymentController extends Controller
         return response()->json($this->paymentService->create($data));
     }
 
-    public function show($id)
-    {
-        return response()->json($this->paymentService->getById($id));
-    }
 
-    public function update(PaymentRequest $request, $id)
+    public function update(Request $request, $id)
     {
-
-        return response()->json($this->paymentService->update($id, $request->validated()));
+        return "yes";
+        return $this->paymentService->update($id, $request->validated());
     }
 
     public function destroy($id)
     {
-        return response()->json(['deleted' => $this->paymentService->delete($id)]);
+        return $this->paymentService->delete($id);
     }
 
     public function getTotalPaymentAndRemaining(Request $request)

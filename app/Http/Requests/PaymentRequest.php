@@ -2,14 +2,21 @@
 
 namespace App\Http\Requests;
 
+use App\GeneralTrait;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\DB;
 
 class PaymentRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
+    use GeneralTrait;
+    protected function prepareForValidation()
+    {
+        $this->merge([
+            'customer_id' => auth('customer')->user()->id,
+        ]);
+    }
     public function authorize(): bool
     {
         return true;
@@ -23,16 +30,15 @@ class PaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'customer_id' => 'required|exists:customers,id',
             'paid' => [
                 'required',
                 'numeric',
                 'min:1',
                 function ($attribute, $value, $fail) {
-                    $customerId = $this->input('customer_id');
+                    // $customerId = $this->input('customer_id');
 
                     $remaining = DB::table('customers')
-                        ->where('id', $customerId)
+
                         ->value('remaining');
 
                     if ($value > $remaining) {
@@ -40,8 +46,11 @@ class PaymentRequest extends FormRequest
                     }
                 },
             ],
-            'payment_number' => 'required|numeric|unique:payments,payment_number|max:999999',
             'payment_image' => 'required|image',
         ];
+    }
+    public function failedValidation(Validator $validator)
+    {
+        throw new HttpResponseException($this->returnValidationError('422', $validator));
     }
 }

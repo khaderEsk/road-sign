@@ -26,6 +26,7 @@ class CustomerRequest extends FormRequest
 
         return [
             'full_name' => 'required|string',
+            'email' => 'required|string|email|max:100|unique:users',
             'company_name' => ['required', 'string'],
             'commercial_registration_number' => 'nullable|string',
             'phone_number' => 'required|string|size:10',
@@ -36,6 +37,7 @@ class CustomerRequest extends FormRequest
             'customer.full_name' => 'required_if:is_tracking,1|max:250',
             'customer.phone_number' => 'required_if:is_tracking,1|max:12',
             'customer.address' => 'required_if:is_tracking,1',
+            
         ];
     }
 }
