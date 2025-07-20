@@ -19,6 +19,7 @@ class BookingCustomerRequest extends FormRequest
         $this->merge([
             'user_id' => 2,
             'customer_id' => auth('customer')->user()->id,
+            'type' => 1
         ]);
     }
     /**

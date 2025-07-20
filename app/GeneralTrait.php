@@ -35,7 +35,7 @@ trait GeneralTrait
     }
 
 
-    public function returnValidationError($code = "422", $validator)
+    public function returnValidationError($code = "400", $validator)
     {
         return $this->returnError($code, $validator->errors());
     }

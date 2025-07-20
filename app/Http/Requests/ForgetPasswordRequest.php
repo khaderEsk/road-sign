@@ -3,16 +3,13 @@
 namespace App\Http\Requests;
 
 use App\GeneralTrait;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Foundation\Http\FormRequest;
 
-class ResetPasswordRequest extends FormRequest
+class ForgetPasswordRequest extends FormRequest
 {
     use GeneralTrait;
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
@@ -26,6 +23,8 @@ class ResetPasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'email' => 'required|email',
+            'token' => 'required|string',
             'password' => 'required|confirmed|min:8'
         ];
     }

@@ -18,12 +18,10 @@ class AuthenticationController extends Controller
 
     public function register(CustomerRequest $request)
     {
-        // return $request;
         return $this->authenticationService->register($request->validated());
     }
     public function login(CustomerLoginRequest $request)
     {
-        // return "yes";
         return $this->authenticationService->login($request);
     }
 

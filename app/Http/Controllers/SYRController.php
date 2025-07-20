@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\GeneralTrait;
+use App\Models\City;
 use App\Models\Company;
 use App\Services\SYRService;
 use Illuminate\Http\Request;
@@ -18,5 +19,9 @@ class SYRController extends Controller
         return $this->syrService->index();
     }
 
-    
+    public function indexe()
+    {
+        return "yes";
+        // return $this->cityService->getAllCity();
+    }
 }

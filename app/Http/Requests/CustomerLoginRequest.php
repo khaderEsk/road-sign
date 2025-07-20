@@ -30,8 +30,8 @@ class CustomerLoginRequest extends FormRequest
             'password' => 'required|string',
         ];
     }
-    public function failedValidation(Validator $validator)
-    {
-        throw new HttpResponseException($this->returnValidationError('422', $validator));
-    }
+    // public function failedValidation(Validator $validator)
+    // {
+    //     throw new HttpResponseException($this->returnValidationError('400', $validator));
+    // }
 }

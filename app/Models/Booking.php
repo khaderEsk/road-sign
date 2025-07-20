@@ -29,7 +29,7 @@ class Booking extends Model
         'total_price_per_month',
         'total_price_befor_discount',
         'units',
-        'status'
+        'status',
 
     ];
     protected $casts = [

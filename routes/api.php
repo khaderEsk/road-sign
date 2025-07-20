@@ -5,8 +5,9 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\RoadSignController;
 use App\Http\Controllers\Api\V1\AuthenticationController;
 use App\Http\Controllers\Api\V1\BookingCustomerController;
+use App\Http\Controllers\Api\V1\CityController;
+use App\Http\Controllers\Api\V1\Customer\ResetPasswordCustomerController;
 use App\Http\Controllers\Api\V1\FavoriteController;
-use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\SYRController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,11 +16,12 @@ Route::group(['prefix' => 'customer'], function () {
     Route::post('/login', [AuthenticationController::class, 'login']);
     Route::post('/verify', [AuthenticationController::class, 'verify']);
     Route::post('/resend-otp', [AuthenticationController::class, 'resendOtp']);
+    Route::apiResource('cities', CityController::class);
 
-    Route::post('/password/code', [PasswordResetController::class, 'sendResetCode']);
-    Route::post('/password/verify', [PasswordResetController::class, 'verifyCode']);
-    Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
-
+    //forget Password
+    Route::post('/password/code', [ResetPasswordCustomerController::class, 'sendResetCode']);
+    Route::post('/password/verify', [ResetPasswordCustomerController::class, 'verifyCode']);
+    Route::post('/password/reset', [ResetPasswordCustomerController::class, 'forgotPassword']);
 
 
     Route::post('/logout', [AuthenticationController::class, 'logout']);
@@ -28,7 +30,7 @@ Route::group(['prefix' => 'customer'], function () {
     Route::get('/RoadSingSites', [RoadSignController::class, 'RoadSingSites']);
     Route::post('/getRoadSingsFilter', [RoadSignController::class, 'getRoadSingsFilter']);
     Route::get('/roadSing/{id}', [RoadSignController::class, 'getById']);
-    Route::post('/recommendByLocationAndBudget', [AIController::class, 'recommendByLocationAndBudget']);
+    Route::get('/recommendByLocationAndBudget', [AIController::class, 'recommendByLocationAndBudget']);
 
     Route::group(['middleware' => ['auth:customer', 'customer.role']], function () {
         Route::apiResource('favorite', FavoriteController::class);
@@ -39,6 +41,11 @@ Route::group(['prefix' => 'customer'], function () {
         Route::apiResource('payments', PaymentController::class);
         Route::get('/payment/accepted', [PaymentController::class, 'getPaymentsAccepted']);
         Route::get('/payment/unaccepted', [PaymentController::class, 'getPaymentsUnaccepted']);
+
+        //Reset Password
+        Route::get('/resetPassword', [ResetPasswordCustomerController::class, 'resetPassword']);
+        Route::post('/resetPassword/verify', [ResetPasswordCustomerController::class, 'verifyCodeRest']);
+        Route::post('/resetPassword/updated', [ResetPasswordCustomerController::class, 'updatedPassword']);
     });
     Route::get('/index', [RoadSignController::class, 'index']);
 });

@@ -35,10 +35,10 @@ class AuthenticationService extends Services
                 $trackingData['belong_id'] = $customer->id;
                 $trackingData['password'] = $customer->password;
                 $trackingData['otp_code'] = $otpCode;
+                $trackingData['commercial_registration_number'] = $customer->commercial_registration_number;
                 $trackingData['otp_expires_at'] = now()->addMinutes(10);
                 Customer::create($trackingData);
             }
-
             $customer->otp_code = $otpCode;
             $customer->otp_expires_at = now()->addMinutes(10);
             $customer->save();
@@ -47,9 +47,8 @@ class AuthenticationService extends Services
                 'otp' => $otpCode,
                 'company_name' => $customer->company_name
             ]));
-
             DB::commit();
-            return $this->returnData($customer, 'تمت انشاء بنجاح، يجب فتح الإيميل وتأكيد الحساب');
+            return $this->returnData(200, 'تمت انشاء بنجاح، يجب فتح الإيميل وتأكيد الحساب');
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
@@ -113,8 +112,6 @@ class AuthenticationService extends Services
         }
     }
 
-
-
     public function login($request)
     {
         try {
@@ -124,11 +121,10 @@ class AuthenticationService extends Services
                 return $this->returnError(404, 'الحساب غير موجود');
             }
             if (!$token = auth('customer')->attempt($credentials)) {
-                return $this->returnError(401, 'كلمة المرور غير صحيحة');
+                return $this->returnError(400, 'كلمة المرور غير صحيحة');
             }
             $user = auth('customer')->user();
-            $user->token = $token;
-            return $this->returnData($user, 'تم تسجيل الدخول بنجاح');
+            return $this->returnData(['customer' => $user, 'token' => $token], 'تم تسجيل الدخول بنجاح');
         } catch (\Throwable $e) {
             return $this->returnError(500, 'حدث خطأ: ' . $e->getMessage());
         }

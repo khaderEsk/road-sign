@@ -5,70 +5,43 @@ namespace App\Services;
 use App\BalanceType;
 use App\BookingType;
 use App\DiscountType;
-use App\GeneralTrait;
 use App\Models\Booking;
 use App\Models\RoadSign;
 use Carbon\Carbon;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
 
-class BookingCustomerService extends Services
+class BookingService extends Services
 {
-    use GeneralTrait;
+
     public function __construct(
         private OrderService $orderService,
         private RoadSignService $roadSignService,
         private PaymentService $paymentService
-    ) {}
-
+    ) {
+    }
     public function getAll()
     {
-        try {
-            $customer = auth('customer')->user();
-            if (!$customer) {
-                return $this->returnError(503, 'خطأ في المصادقة');
-            }
-            $customer->load(['bookings.roadSigns', 'bookings.roadSigns.city', 'bookings.roadSigns.region', 'bookings.roadSigns.template', 'bookings.roadSigns.template.products']);
-
-            $bookings = $customer->getRelation('bookings');
-            // $booking = Booking::where('customer_id', $customer->id)
-            //     ->with([
-            //         'roadsigns.city',
-            //         'roadsigns.region',
-            //         'roadsigns.template',
-            //         'roadsigns.template.products',
-            //     ])
-            //     ->orderbyDesc('created_at')->get();
-            return $this->returnData($bookings, 'تمت العملية بنجاح');
-        } catch (\Throwable $e) {
-            return $this->returnError($e->getCode(), $e->getMessage());
-        }
+        return Booking::with(['user', 'user.company', 'roadsigns', 'roadsigns.city', 'roadsigns.region', 'customer', 'roadsigns.template'])->orderbyDesc('created_at')->get();
     }
 
 
     public function update($id, array $data)
     {
         return DB::transaction(function () use ($id, $data) {
-            $customer = auth('customer')->user();
-            if (!$customer) {
-                return $this->returnError(404, 'حدث خطأ');
-            }
-            $booking = Booking::find($id);
-            if (!$booking) {
-                return $this->returnError(404, 'الحجز غير موجود');
-            }
-            if ($booking->customer_id != $customer->id) {
-                return $this->returnError(404, 'ليس لديك صلاحية تعديل');
-            }
+            $booking = Booking::findOrFail($id);
             $originalType = $booking->type;
             $originalPrice = $booking->total_price;
             $amounts = $this->calculateAmount($data, $data['product_type']);
             $pivotData = $this->preparePivotData($data, $amounts['pricing_details']);
             $this->checkAvailability($pivotData, $data['start_date'], $data['end_date'], $id);
+
             $booking->update($data);
             $booking->roadsigns()->sync($pivotData);
             $this->applyBookingAmounts($booking, $amounts);
+
             if ($originalType->value != $data['type'] && $data['type'] == BookingType::PERMANENT->value) {
+
                 $this->orderService->createInstallationAndReleaseOrders($booking);
                 $this->updateCustomerBalance($booking, BalanceType::INCREMENT, $originalPrice);
             }
@@ -76,30 +49,17 @@ class BookingCustomerService extends Services
                 $this->updateCustomerBalance($booking, BalanceType::DECREMENT, $originalPrice);
                 $booking->orders()->delete();
             }
+
+            $this->logActivity("تم تعديل الحجز للعميل: {$booking->customer->full_name} بواسطة المستخدم: {$booking->user->full_name}");
             return $booking->load('roadsigns');
         });
     }
 
     public function delete($id)
     {
-        try {
-            $customer = auth('customer')->user();
-            if (!$customer) {
-                return $this->returnError(404, 'حدث خطأ');
-            }
-            $booking = Booking::find($id);
-            if (!$booking) {
-                return $this->returnError(404, 'الحجز غير موجود');
-            }
-            if ($booking->customer_id != $customer->id) {
-                return $this->returnError(503, 'ليس لديك صلاحية حذف');
-            }
-            $booking->delete();
-            return $this->returnData(200, 'تم إزالة الحجز بنجاح');
-        } catch (\Throwable $e) {
-            return $this->returnError($e->getCode(), $e->getMessage());
-        }
-        // $this->logActivity("تم حذف الحجز للعميل: {$booking->customer->full_name} بواسطة: {$booking->user->full_name}");
+        $booking = Booking::findOrFail($id);
+        $this->logActivity("تم حذف الحجز للعميل: {$booking->customer->full_name} بواسطة: {$booking->user->full_name}");
+        $booking->delete();
 
         return true;
     }
@@ -117,6 +77,7 @@ class BookingCustomerService extends Services
         }
         $startDate = $booking->start_date;
         $endDate = $booking->end_date;
+
         $groupedTemplates = $booking->roadsigns
             ->groupBy(function ($roadSign) {
                 return $roadSign->template->model ?? 'unknown';
@@ -133,6 +94,7 @@ class BookingCustomerService extends Services
                             return $relatedBooking->pivot->number_of_reserved_panels ?? 0;
                         });
                 });
+
                 return [
                     'model' => $model,
                     'total_faces' => $totalFaces,
@@ -145,8 +107,10 @@ class BookingCustomerService extends Services
 
     public function create(array $data)
     {
-        $ss = DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data) {
+
             $amounts = $this->calculateAmount($data, $data['product_type']);
+
             $pivotData = $this->preparePivotData($data, $amounts['pricing_details']);
             $this->checkAvailability($pivotData, $data['start_date'], $data['end_date']);
             $booking = Booking::create($data);
@@ -155,11 +119,12 @@ class BookingCustomerService extends Services
             if ($booking->type->value === BookingType::PERMANENT->value) {
                 $this->orderService->createInstallationAndReleaseOrders($booking);
                 $this->updateCustomerBalance($booking);
-                $booking;
             }
+            $this->logActivity(
+                "تم إنشاء حجز للعميل: {$booking->customer->full_name} بواسطة: {$booking->user->full_name}"
+            );
             return $booking->load('roadsigns');
         });
-        return $ss;
     }
 
     public function calculateAmount(array $data, $productType): array
@@ -265,7 +230,7 @@ class BookingCustomerService extends Services
         return $pivotData;
     }
 
-    private function updateCustomerBalance(Booking $booking, $type = BalanceType::INCREMENT, $originalPrice = 100): void
+    private function updateCustomerBalance(Booking $booking, $type = BalanceType::INCREMENT, $originalPrice = 0): void
     {
         if ($type == BalanceType::INCREMENT) {
             $booking->customer->decrement('remaining', $originalPrice);
@@ -285,13 +250,13 @@ class BookingCustomerService extends Services
                 'message' => "قيمة الحسم اكبر من قيمة العقد"
             ], 422));
         }
+
         return match ($discountType) {
             1 => max(0, $price - $value),
             2 => max(0, $price - ($price * ($value / 100))),
             default => $price,
         };
     }
-    
     private function calculateDaysBetween(string $startDate, string $endDate): int
     {
         return Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1;
