@@ -35,10 +35,11 @@ class ResetPasswordNotification extends Notification
     public function toMail($notifiable)
     {
         return (new MailMessage)
-            ->subject('رمز إعادة تعيين كلمة المرور')
-            ->line('رمز إعادة التعيين الخاص بك هو:')
-            ->line($this->token)
-            ->line('هذا الرمز صالح لمدة 30 دقيقة فقط.');
+            ->subject('إعادة تعيين كلمة المرور - ' . config('app.name'))
+            ->view('password-reset', [
+                'token' => $this->token,
+                'user' => $notifiable
+            ]);
     }
 
     /**

@@ -27,7 +27,6 @@ class RoadSignService extends Services
             ])
                 ->when($customer, function ($query) {
                     $query->join('cities', 'road_signs.city_id', '=', 'cities.id')
-                        // $query->join('regions', 'road_signs.region_id', '=', 'regions.id')
                         ->orderBy('cities.name')
                         ->orderBy('road_signs.created_at');
                 }, function ($query) {

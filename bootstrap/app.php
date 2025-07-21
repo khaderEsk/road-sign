@@ -41,7 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => "العنصر غير موجود",
                 ]);
             }
-        }, 400);
+        }, 401);
         $exceptions->render(function (Throwable $e, Request $request) {
             if ($e instanceof AuthenticationException and $request->is('api/*')) {
                 return response()->json([

@@ -19,16 +19,6 @@ class PaymentController extends Controller
         return $this->paymentService->getAll();
     }
 
-    public function getPaymentsUnaccepted()
-    {
-        return $this->paymentService->getPaymentsUnaccepted();
-    }
-
-    public function getPaymentsAccepted()
-    {
-        return $this->paymentService->getPaymentsAccepted();
-    }
-
     public function store(PaymentRequest $request)
     {
         $data = $request->validated();

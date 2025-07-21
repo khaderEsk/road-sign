@@ -64,10 +64,10 @@ class AuthenticationService extends Services
                 ->where('otp_expires_at', '>', now())
                 ->first();
             if (!$customer) {
-                return $this->returnError(401, 'كود التحقق غير صحيح أو منتهي الصلاحية');
+                return $this->returnError(400, 'كود التحقق غير صحيح أو منتهي الصلاحية');
             }
             if (!Hash::check($request['password'], $customer->password)) {
-                return $this->returnError(401, 'كلمة المرور غير صحيحة');
+                return $this->returnError(400, 'كلمة المرور غير صحيحة');
             }
             $customer->email_verified_at = now();
             $customer->otp_code = null;
@@ -79,13 +79,13 @@ class AuthenticationService extends Services
             ];
             $token = auth('customer')->attempt($credentials);
             if (!$token) {
-                return $this->returnError(401, 'فشل تسجيل الدخول للعميل');
+                return $this->returnError(400, 'فشل تسجيل الدخول للعميل');
             }
             $customer->token = $token;
             $customer->assignRole('customer');
             $customer->loadMissing(['roles']);
             DB::commit();
-            return $this->returnData($customer, 'تم تفعيل الحساب بنجاح!');
+            return $this->returnData(['customer' => $customer, 'token' => $token], 'تم تفعيل الحساب بنجاح!');
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->returnError($e->getCode(), $e->getMessage());
@@ -119,6 +119,9 @@ class AuthenticationService extends Services
             $customer = Customer::where('company_name', $credentials['company_name'])->first();
             if (!$customer) {
                 return $this->returnError(404, 'الحساب غير موجود');
+            }
+            if($customer->otp_code){
+                return $this->returnError(400, 'يجب عليك تأكيد حسابك ');
             }
             if (!$token = auth('customer')->attempt($credentials)) {
                 return $this->returnError(400, 'كلمة المرور غير صحيحة');
@@ -203,7 +206,7 @@ class AuthenticationService extends Services
             $token = auth('customer')->refresh();
             return $this->respondWithToken($token);
         } catch (TokenInvalidException $e) {
-            return response()->json(['message' => 'توكن غير صالح'], 401);
+            return response()->json(['message' => 'توكن غير صالح'], 400);
         }
     }
 

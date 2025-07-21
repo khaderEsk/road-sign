@@ -4,47 +4,68 @@ namespace App\Services;
 
 use App\GeneralTrait;
 use App\Models\RoadSign;
+use App\ProductType;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class AIService extends Services
 {
     use GeneralTrait;
-    public function recommendByLocationAndBudget($request)
+    public function recommendByLocationAndBudget(Request $request)
     {
         try {
-            $budget = $request->input('budget');
-            $cityId = $request->input('city_id');
-            $regionId = $request->input('region_id');
-            $type = $request->input('type');
-            $roadSigns = RoadSign::with([
-                'template.products',
-                'city',
-                'region',
-            ])
-                ->when($cityId, fn($q) => $q->where('city_id', $cityId))
-                ->when($regionId, fn($q) => $q->where('region_id', $regionId))
-                ->get()
-                ->filter(function ($sign) use ($budget, $type) {
-                    $products = $sign->template->products;
-                    if ($type) {
-                        $products = $products->filter(function ($product) use ($type) {
-                            return $product->type->value === (int)$type
-                                || $product->type->value === \App\ProductType::BOTH->value;
-                        });
-                    }
-                    $totalCost = $products->sum('price');
-                    if ($budget !== null) {
-                        return $totalCost <= $budget;
-                    }
-                    return true;
-                })
-                ->sortBy(function ($sign) {
-                    return $sign->template->products->sum('price');
-                })
-                ->values();
-            if ($roadSigns->isEmpty()) {
-                return $this->returnError(null, 'لا توجد اقتراحات مطابقة للمعايير التي أدخلتها.');
+            $customer = auth('customer')->user();
+
+            // جمع جميع معاملات الفلترة
+            $filters = $request->only(['city_id', 'region_id', 'type', 'budget', 'page', 'perPage']);
+
+            $query = RoadSign::with(['template.products', 'city', 'region'])
+                ->when($request->city_id, fn($q) => $q->where('city_id', $request->city_id))
+                ->when($request->region_id, fn($q) => $q->where('region_id', $request->region_id))
+                ->orderBy('created_at', 'desc');
+
+            if ($request->type) {
+                $query->whereHas('template.products', function ($q) use ($request) {
+                    $q->where('type', $request->type)
+                        ->orWhere('type', ProductType::BOTH->value);
+                });
             }
-            return $this->returnData($roadSigns, 'تم العثور على اقتراحات مناسبة');
+
+            $results = $query->get();
+
+            if ($request->budget) {
+                $results = $results->filter(function ($sign) use ($request) {
+                    return $sign->template->products->sum('price') <= $request->budget;
+                })->values();
+            }
+
+            $perPage = $request->perPage ?? 10;
+            $currentPage = $request->page ?? 1;
+
+            $paginatedResults = new LengthAwarePaginator(
+                $results->forPage($currentPage, $perPage),
+                $results->count(),
+                $perPage,
+                $currentPage,
+                [
+                    'path' => $request->url(),
+                    'query' => $filters // تضمين جميع الفلاتر في روابط الصفحات
+                ]
+            );
+
+            return response()->json([
+                'status' => 200,
+                'message' => $paginatedResults->isEmpty()
+                    ? 'لم يتم العثور على اقتراحات مناسبة'
+                    : 'تم العثور على اقتراحات مناسبة',
+                'data' => $paginatedResults->items(),
+                'meta' => [
+                    'total_pages' => $paginatedResults->lastPage(),
+                    'total' => $paginatedResults->total(),
+                    'count' => count($paginatedResults->items()),
+                    'current_page' => (int)$currentPage,
+                    'per_page' => (int)$perPage
+                ]
+            ]);
         } catch (\Throwable $e) {
             return $this->returnError($e->getMessage(), 'حدث خطأ أثناء توليد الاقتراحات');
         }

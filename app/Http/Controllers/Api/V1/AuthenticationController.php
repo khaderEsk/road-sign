@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\GeneralTrait;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CustomerLoginRequest;
 use App\Http\Requests\CustomerRequest;
@@ -11,9 +12,11 @@ use App\Http\Requests\VerifyRequest;
 use App\Models\Customer;
 use App\Services\AuthenticationService;
 use Illuminate\Http\Request;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthenticationController extends Controller
 {
+    use GeneralTrait;
     public function __construct(protected AuthenticationService $authenticationService) {}
 
     public function register(CustomerRequest $request)
@@ -47,5 +50,15 @@ class AuthenticationController extends Controller
     public function resendOtp(ResendVerifyRequest $request)
     {
         return $this->authenticationService->resendOtp($request->validated());
+    }
+    public function refresh()
+    {
+        // return "yes";
+        try {
+            $newToken = JWTAuth::parseToken()->refresh();
+            return $this->returnData(['token' => $newToken], 'تمت العملية بنجاح');
+        } catch (\Throwable $e) {
+            return $this->returnError(500, 'حدث خطأ: ' . $e->getMessage());
+        }
     }
 }

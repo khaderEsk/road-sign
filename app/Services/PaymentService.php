@@ -15,46 +15,30 @@ class PaymentService extends Services
 {
     use ImageTrait;
     use GeneralTrait;
-
+    private $uploadPath = "assets/images/payments";
     public function getAll()
     {
         $customer = auth('customer')->user();
+        $received = request()->input('is_received');
         if (!$customer) {
             return $this->returnError(404, 'الحساب غير موجود');
         }
-        $payments = $customer
-            ->payments()
-            ->orderBy('created_at', 'desc')
-            ->get();
-        return $this->returnData($payments, 'تمت العملية بنجاح');
-    }
+        $received = filter_var(request()->input('is_received'), FILTER_VALIDATE_BOOLEAN);
 
-    public function getPaymentsUnaccepted()
-    {
-        $customer = auth('customer')->user();
-        if (!$customer) {
-            return $this->returnError(404, 'الحساب غير موجود');
-        }
-        $payments_unaccepted = $customer
-            ->payments()
-            ->where('is_received', false)
+        $payments = $customer->payments()
+            ->when($received, function ($query) use ($received) {
+                return $query->where('is_received', $received);
+            })
             ->orderBy('created_at', 'desc')
             ->get();
-        return $this->returnData($payments_unaccepted, 'تمت العملية بنجاح');
-    }
+        $message = isset($received)
+            ? ($received ? 'الدفعات المستلمة' : 'الدفعات الغير مستلمة')
+            : 'جميع الدفعات';
 
-    public function getPaymentsAccepted()
-    {
-        $customer = auth('customer')->user();
-        if (!$customer) {
-            return $this->returnError(404, 'الحساب غير موجود');
-        }
-        $payments_accepted = $customer
-            ->payments()
-            ->where('is_received', true)
-            ->orderBy('created_at', 'desc')
-            ->get();
-        return $this->returnData($payments_accepted, 'تمت العملية بنجاح');
+        return $this->returnData(
+            $payments,
+            $message
+        );
     }
 
 

@@ -27,16 +27,17 @@ class CustomerRequest extends FormRequest
         return [
             'full_name' => 'required|string',
             'email' => 'required|string|email|max:100|unique:users',
+            'password' => 'required|string|min:6|regex:/[a-zA-Z]/',
             'company_name' => ['required', 'string'],
             'commercial_registration_number' => 'nullable|string',
             'phone_number' => 'required|string|size:10',
             'address' => 'required|string|max:250',
-            'password' => 'required|string|min:6|regex:/[a-zA-Z]/',
             'alt_phone_number' => ['array', 'nullable'],
             'is_tracking' => 'required|boolean',
             'customer.full_name' => 'required_if:is_tracking,1|max:250',
             'customer.phone_number' => 'required_if:is_tracking,1|max:12',
             'customer.address' => 'required_if:is_tracking,1',
+
             
         ];
     }
