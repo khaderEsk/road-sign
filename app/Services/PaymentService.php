@@ -15,7 +15,6 @@ class PaymentService extends Services
 {
     use ImageTrait;
     use GeneralTrait;
-    private $uploadPath = "assets/images/payments";
     public function getAll()
     {
         $customer = auth('customer')->user();
@@ -59,13 +58,10 @@ class PaymentService extends Services
             $payment->paid = $data['paid'];
             $payment->total = $customer->remaining;
             $payment->remaining = $payment->total - $data['paid'];
-            if ($payment->total > $payment->remaining) {
-                DB::rollBack();
-                return $this->returnError(404, 'دفعاتك تجاوزت القيمة المتبقية عليك');
-            }
             $payment->payment_number = $nextPaymentNumber;
             $payment->payment_image = $data['payment_image'];
             $payment->date = now();
+            $payment->is_received= 0;
             $payment->save();
             $customer->remaining = $payment->remaining;
             $customer->save();
@@ -87,23 +83,17 @@ class PaymentService extends Services
         if (!$payment) {
             return $this->returnError(404, 'الدفعة غير موجودة');
         }
-
         if ($payment->customer_id != $customer->id) {
             return $this->returnError(501, 'ليس لديك صلاحية تعديل هذه الدفعة');
         }
         if (!$payment->is_received == true) {
             return $this->returnError(503, 'الدفعة تم تأكيدها لا يمكن تعديلها');
         }
-
         $payment->paid = $data['paid'];
         $payment->remaining = $payment->remaining - $data['paid'];
         $payment->payment_number = $data['payment_number'];
         $payment->payment_image = $data['payment_image'];
         $payment->date = now();
-        if ($payment->total > $payment->remaining) {
-            DB::rollBack();
-            return $this->returnError(404, 'دفعاتك تجاوزت القيمة المتبقية عليك');
-        }
         $payment->save();
         return $this->returnData($payment, 'تم تعديل الدفعة بنجاح');
     }
@@ -125,7 +115,6 @@ class PaymentService extends Services
             return $this->returnError(503, 'الدفعة تم تأكيدها لا يمكن تعديلها');
         }
         $payment->delete();
-
         return $this->returnData(200, 'تم حذف الدفعة بنجاح');
     }
 

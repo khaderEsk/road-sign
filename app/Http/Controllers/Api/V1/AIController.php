@@ -18,15 +18,18 @@ class AIController extends Controller
     public function recommendByLocationAndBudget(Request $request)
     {
         try {
-            $customer = auth('customer')->user();
-
-            // جمع جميع معاملات الفلترة
-            $filters = $request->only(['city_id', 'region_id', 'type', 'budget', 'page', 'perPage']);
-
+            $customerId = auth('customer')->id();
             $query = RoadSign::with(['template.products', 'city', 'region'])
                 ->when($request->city_id, fn($q) => $q->where('city_id', $request->city_id))
                 ->when($request->region_id, fn($q) => $q->where('region_id', $request->region_id))
-                ->orderBy('created_at', 'desc');
+                ->when($customerId, function ($q) use ($customerId) {
+                    $q->withCount(['favorite as is_favorite' => function ($query) use ($customerId) {
+                        $query->where('customer_id', $customerId);
+                    }]);
+                }, function ($q) {
+                    $q->selectRaw('*, 0 as is_favorite'); // إذا لم يكن هناك مستخدم مسجل
+                })
+                ->orderBy('created_at');
 
             if ($request->type) {
                 $query->whereHas('template.products', function ($q) use ($request) {
@@ -34,39 +37,25 @@ class AIController extends Controller
                         ->orWhere('type', ProductType::BOTH->value);
                 });
             }
-
             $results = $query->get();
-
             if ($request->budget) {
                 $results = $results->filter(function ($sign) use ($request) {
                     return $sign->template->products->sum('price') <= $request->budget;
                 })->values();
             }
-
             $perPage = $request->perPage;
             $currentPage = $request->page;
-
-            $paginatedResults = new LengthAwarePaginator(
-                $results->forPage($currentPage, $perPage),
-                $results->count(),
-                $perPage,
-                $currentPage,
-                [
-                    'path' => $request->url(),
-                    'query' => $filters 
-                ]
-            );
-
+            $results = $query->paginate($perPage);
             return response()->json([
                 'status' => 200,
-                'message' => $paginatedResults->isEmpty()
+                'message' => $results->isEmpty()
                     ? 'لم يتم العثور على اقتراحات مناسبة'
                     : 'تم العثور على اقتراحات مناسبة',
-                'data' => $paginatedResults->items(),
+                'data' => $results->items(),
                 'meta' => [
-                    'total_pages' => $paginatedResults->lastPage(),
-                    'total' => $paginatedResults->total(),
-                    'count' => count($paginatedResults->items()),
+                    'total_pages' => $results->lastPage(),
+                    'total' => $results->total(),
+                    'count' => count($results->items()),
                     'current_page' => (int)$currentPage,
                     'per_page' => (int)$perPage
                 ]
@@ -75,6 +64,4 @@ class AIController extends Controller
             return $this->returnError($e->getMessage(), 'حدث خطأ أثناء توليد الاقتراحات');
         }
     }
-    // return $this->aiService->recommendByLocationAndBudget($request);
-
 }

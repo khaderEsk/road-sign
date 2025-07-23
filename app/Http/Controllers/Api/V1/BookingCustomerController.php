@@ -29,9 +29,9 @@ class BookingCustomerController extends Controller
         return response()->json($this->bookingCustomerService->create($request->validated()));
     }
 
-    public function show(string $id)
+    public function show($id)
     {
-        //
+        return $this->bookingCustomerService->show($id);
     }
 
     public function edit(string $id)

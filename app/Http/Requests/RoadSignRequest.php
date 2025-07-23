@@ -24,6 +24,9 @@ class RoadSignRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'latitudeX' => 'required',
+            'longitudeY' => 'required',
+            'img' => 'required|image',
             'template_id' => 'required|exists:templates,id',
             'city_id' => 'required|exists:cities,id',
             'region_id' => 'required|exists:regions,id',

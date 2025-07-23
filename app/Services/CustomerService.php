@@ -3,11 +3,13 @@
 namespace App\Services;
 
 use App\CustomerType;
+use App\Mail\CustomerVerificationEmail;
 use App\Models\Customer;
 use App\Models\Activity;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class CustomerService extends Services
 {
@@ -27,6 +29,7 @@ class CustomerService extends Services
         DB::beginTransaction();
         try {
             $customer = Customer::create($data);
+            $otpCode = rand(100000, 999999);
             if (!empty($data['is_tracking'])) {
                 $customerTracking = new Customer($data['customer']);
                 $customerTracking->company_name = $customer->company_name;
@@ -34,6 +37,14 @@ class CustomerService extends Services
                 $customerTracking->belong_id = $customer->id;
                 $customerTracking->save();
             }
+            $customer->otp_code = $otpCode;
+            $customer->otp_expires_at = now()->addMinutes(10);
+            $customer->save();
+            Mail::to($customer->email)->send(new CustomerVerificationEmail([
+                'name' => $customer->name,
+                'otp' => $otpCode,
+                'company_name' => $customer->company_name
+            ]));
             DB::commit();
         } catch (Exception $e) {
             throw $e->getMessage();
@@ -51,7 +62,7 @@ class CustomerService extends Services
             $customer = Customer::findOrFail($id);
             $customer->update($data);
             $customerTracking = $customer->customers()->first();
-            if ( $data['is_tracking'] == 1) {
+            if ($data['is_tracking'] == 1) {
                 if (isset($customerTracking)) {
                     $customerTracking->update($data['customer']);
                 } else {
@@ -82,5 +93,4 @@ class CustomerService extends Services
 
         return true;
     }
-
 }

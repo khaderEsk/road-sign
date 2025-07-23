@@ -4,7 +4,6 @@ use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\AIController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\PaymentController;
-use App\Http\Controllers\Api\V1\RoadSignController;
 use App\Http\Controllers\Api\V1\AuthenticationController;
 use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\BookingCustomerController;
@@ -14,6 +13,7 @@ use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\ContractController;
 use App\Http\Controllers\Api\V1\Customer\ForgetPasswordCustomerController;
 use App\Http\Controllers\Api\V1\Customer\ResetPasswordCustomerController;
+use App\Http\Controllers\Api\V1\Customer\RoadSignCustomerController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DiscountController;
@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\FavoriteController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\RegionController;
+use App\Http\Controllers\Api\V1\RoadSignController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -34,41 +35,40 @@ Route::group(['prefix' => 'customer'], function () {
     Route::post('/verify', [AuthenticationController::class, 'verify']);
     Route::post('/resend-otp', [AuthenticationController::class, 'resendOtp']);
     Route::post('/logout', [AuthenticationController::class, 'logout']);
-    
+
     //forget Password
     Route::post('/password/code', [ForgetPasswordCustomerController::class, 'sendResetCode']);
     Route::post('/password/verify', [ForgetPasswordCustomerController::class, 'verifyCode']);
     Route::post('/password/reset', [ForgetPasswordCustomerController::class, 'forgotPassword']);
-    
-    
+
+
     Route::apiResource('cities', CityController::class);
     Route::get('/details', [SYRController::class, 'index']);
-    Route::get('/roadSing', [RoadSignController::class, 'getAllRoadSing']);
-    Route::get('/RoadSingSites', [RoadSignController::class, 'RoadSingSites']);
-    Route::post('/getRoadSingsFilter', [RoadSignController::class, 'getRoadSingsFilter']);
-    Route::get('/roadSing/{id}', [RoadSignController::class, 'getById']);
+    Route::get('/roadSing', [RoadSignCustomerController::class, 'getAllRoadSing']);
+    Route::get('/RoadSingSites', [RoadSignCustomerController::class, 'RoadSingSites']);
+    Route::post('/getRoadSingsFilter', [RoadSignCustomerController::class, 'getRoadSingsFilter']);
+    Route::get('/roadSing/{id}', [RoadSignCustomerController::class, 'getById']);
     Route::get('/recommendByLocationAndBudget', [AIController::class, 'recommendByLocationAndBudget']);
 
+
+
     Route::group(['middleware' => ['auth:customer', 'customer.role']], function () {
-        Route::get('/refreshss', [AuthenticationController::class, 'refresh']);
+        Route::get('/refresh', [AuthenticationController::class, 'refresh']);
 
         Route::apiResource('favorite', FavoriteController::class);
+
         Route::get('/myProfile', [AuthenticationController::class, 'profile']);
         Route::post('/update-myProfile', [AuthenticationController::class, 'updateProfile']);
         Route::apiResource('booking', BookingCustomerController::class);
         Route::post('get-calculate-Amount', [BookingCustomerController::class, 'calculateAmounts']);
         Route::apiResource('payments', PaymentController::class);
-        // Route::get('/payment/accepted', [PaymentController::class, 'getPaymentsAccepted']);
-        // Route::get('/payment/unaccepted', [PaymentController::class, 'getPaymentsUnaccepted']);
-
         //Reset Password
         Route::get('/resetPassword', [ResetPasswordCustomerController::class, 'resetPassword']);
         Route::post('/resetPassword/verify', [ResetPasswordCustomerController::class, 'verifyCodeRest']);
         Route::post('/resetPassword/updated', [ResetPasswordCustomerController::class, 'updatedPassword']);
     });
-    Route::get('/index', [RoadSignController::class, 'index']);
+    Route::get('/index', [RoadSignCustomerController::class, 'index']);
 });
-
 
 
 Route::post('login', [AuthController::class, 'login']);

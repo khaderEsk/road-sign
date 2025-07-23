@@ -19,8 +19,8 @@ return new class extends Migration
             $table->longText('description')->nullable();
             $table->longText('about_us')->nullable();
             $table->longText('contract_note')->nullable();
-            $table->string('latitudeX');
-            $table->string('longitudeY');
+            $table->double('latitudeX');
+            $table->double('longitudeY');
             $table->string('img');
             $table->timestamps();
         });

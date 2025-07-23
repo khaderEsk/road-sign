@@ -19,17 +19,18 @@ class PaymentController extends Controller
         return $this->paymentService->getAll();
     }
 
+
+
     public function store(PaymentRequest $request)
     {
         $data = $request->validated();
         $data['payment_image'] = $this->uploadImage($request, 'payment_image', 'payments');
-        return response()->json($this->paymentService->create($data));
+        return $this->paymentService->create($data);
     }
 
 
     public function update(Request $request, $id)
     {
-        return "yes";
         return $this->paymentService->update($id, $request->validated());
     }
 

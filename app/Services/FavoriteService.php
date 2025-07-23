@@ -26,22 +26,23 @@ class FavoriteService
         }
     }
 
-    public function add($request)
+    public function add($id)
     {
         try {
             $user = auth('customer')->user();
-            $favorite = RoadSign::where('id', $request->road_id)->first();
-            if (!$favorite) {
+            $roadSign = RoadSign::where('id', $id)->first();
+            if (!$roadSign) {
                 return $this->returnError(502, 'الإعلان غير موجود');
             }
             $exists = Favorite::where('customer_id', auth('customer')->id())
-                ->where('road_id', $request->road_id)
-                ->exists();
+                ->where('road_id', $id)
+                ->first();
             if ($exists) {
-                return $this->returnError(502, 'تمت إضافة الإعلان مسبقاً');
+                $exists->delete();
+                return $this->returnData(200, 'تم إزالة الإعلان من المفضلة');
             }
             Favorite::create([
-                'road_id' => $request->road_id,
+                'road_id' => $id,
                 'customer_id' => $user->id
             ]);
             return $this->returnData(201, 'تم اضافة العنصر إلى المفضلة');

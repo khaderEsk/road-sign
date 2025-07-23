@@ -31,20 +31,73 @@ class BookingCustomerService extends Services
             $customer->load(['bookings.roadSigns', 'bookings.roadSigns.city', 'bookings.roadSigns.region', 'bookings.roadSigns.template', 'bookings.roadSigns.template.products']);
 
             $bookings = $customer->getRelation('bookings');
-            // $booking = Booking::where('customer_id', $customer->id)
-            //     ->with([
-            //         'roadsigns.city',
-            //         'roadsigns.region',
-            //         'roadsigns.template',
-            //         'roadsigns.template.products',
-            //     ])
-            //     ->orderbyDesc('created_at')->get();
             return $this->returnData($bookings, 'تمت العملية بنجاح');
         } catch (\Throwable $e) {
             return $this->returnError($e->getCode(), $e->getMessage());
         }
     }
 
+    public function show($id)
+    {
+        try {
+            $customer = auth('customer')->user();
+            if (!$customer) {
+                return $this->returnError(503, 'خطأ في المصادقة');
+            }
+            $booking = Booking::with([
+                'roadSigns.city',
+                'roadSigns.region',
+                'roadSigns.template.products'
+            ])->find($id);
+            if (!$booking) {
+                return $this->returnError(404, 'الحجز غير موجود');
+            }
+            if ($booking->customer_id != $customer->id) {
+                return $this->returnError(404, 'الحجز ليس لك');
+            }
+
+            foreach ($booking->roadsigns as $roadSign) {
+                $roadSign->total_faces_on_date = $roadSign->bookings->sum(function ($relatedBooking) {
+                    return $relatedBooking->pivot->booking_faces ?? 0;
+                });
+                $roadSign->total_panels_on_date = $roadSign->bookings->sum(function ($relatedBooking) {
+                    return $relatedBooking->pivot->number_of_reserved_panels ?? 0;
+                });
+            }
+            $startDate = $booking->start_date;
+            $endDate = $booking->end_date;
+
+            $groupedTemplates = $booking->roadsigns
+                ->groupBy(function ($roadSign) {
+                    return $roadSign->template->model ?? 'unknown';
+                })
+                ->map(function ($group, $model) use ($startDate, $endDate) {
+                    $totalFaces = $group->sum(function ($roadSign) use ($startDate, $endDate) {
+                        return $roadSign->bookings
+                            ->filter(function ($relatedBooking) use ($startDate, $endDate) {
+                                return $relatedBooking->start_date <= $endDate &&
+                                    $relatedBooking->end_date >= $startDate;
+                            })
+                            ->sum(function ($relatedBooking) {
+                                return $relatedBooking->pivot->booking_faces ?? 0;
+                                return $relatedBooking->pivot->number_of_reserved_panels ?? 0;
+                            });
+                    });
+
+                    return [
+                        'model' => $model,
+                        'total_faces' => $totalFaces,
+                    ];
+                })
+                ->values();
+            $booking->groupedTemplates = $groupedTemplates;
+
+
+            return $this->returnData($booking, 'تمت العملية بنجاح');
+        } catch (\Throwable $e) {
+            return $this->returnError($e->getCode(), $e->getMessage());
+        }
+    }
 
     public function update($id, array $data)
     {
@@ -291,7 +344,7 @@ class BookingCustomerService extends Services
             default => $price,
         };
     }
-    
+
     private function calculateDaysBetween(string $startDate, string $endDate): int
     {
         return Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1;
