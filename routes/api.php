@@ -18,9 +18,12 @@ use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DiscountController;
 use App\Http\Controllers\Api\V1\FavoriteController;
+use App\Http\Controllers\Api\V1\ForgetPasswordController;
+use App\Http\Controllers\Api\V1\GoogleController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\RegionController;
+use App\Http\Controllers\Api\V1\ResetPasswordController;
 use App\Http\Controllers\Api\V1\RoadSignController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\TemplateController;
@@ -35,6 +38,9 @@ Route::group(['prefix' => 'customer'], function () {
     Route::post('/verify', [AuthenticationController::class, 'verify']);
     Route::post('/resend-otp', [AuthenticationController::class, 'resendOtp']);
     Route::post('/logout', [AuthenticationController::class, 'logout']);
+
+    Route::get('/login/google', [GoogleController::class, 'redirectToGoogle']);
+    Route::get('/login/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 
     //forget Password
     Route::post('/password/code', [ForgetPasswordCustomerController::class, 'sendResetCode']);
@@ -71,6 +77,10 @@ Route::group(['prefix' => 'customer'], function () {
 });
 
 
+
+Route::post('/password/code', [ForgetPasswordController::class, 'sendResetCode']);
+Route::post('/password/verify', [ForgetPasswordCustomerController::class, 'verifyCode']);
+Route::post('/password/reset', [ForgetPasswordController::class, 'forgotPassword']);
 Route::post('login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
@@ -108,7 +118,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('get-total-payment-and-remaining', [PaymentController::class, 'getTotalPaymentAndRemaining']);
     Route::get('payment-is-Received/{id}', [PaymentController::class, 'isReceived']);
     Route::apiResource('companies', CompanyController::class);
+
+    //Reset Password
+
+    Route::get('/resetPassword', [ResetPasswordController::class, 'resetPassword']);
+    Route::post('/resetPassword/verify', [ResetPasswordController::class, 'verifyCodeRest']);
+    Route::post('/resetPassword/updated', [ResetPasswordController::class, 'updatedPassword']);
 });
+
+
 Route::get('give-role', function () {
     $usersWithoutRoles = User::doesntHave('roles')->get();
     foreach ($usersWithoutRoles as $user)

@@ -32,7 +32,11 @@ class Customer extends Authenticatable implements JWTSubject
         'email',
         'otp_code',
         'otp_expires_at',
-        'email_verified_at'
+        'email_verified_at',
+        'status',
+        'img',
+        'google_id',
+        'fcm_token',
     ];
     protected $appends = [
         'total',

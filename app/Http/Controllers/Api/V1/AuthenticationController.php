@@ -6,10 +6,9 @@ use App\GeneralTrait;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CustomerLoginRequest;
 use App\Http\Requests\CustomerRequest;
+use App\Http\Requests\RegisterCustomerRequest;
 use App\Http\Requests\ResendVerifyRequest;
-use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Requests\VerifyRequest;
-use App\Models\Customer;
 use App\Services\AuthenticationService;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -19,7 +18,7 @@ class AuthenticationController extends Controller
     use GeneralTrait;
     public function __construct(protected AuthenticationService $authenticationService) {}
 
-    public function register(CustomerRequest $request)
+    public function register(RegisterCustomerRequest $request)
     {
         return $this->authenticationService->register($request->validated());
     }

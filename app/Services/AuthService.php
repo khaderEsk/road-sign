@@ -18,11 +18,11 @@ class AuthService extends Services
         $token = JWTAuth::attempt($credential);
 
         $exist = User::where('username', $credentials->username)->first();
+
         if ($exist && !$token)
             throw ValidationException::withMessages([
                 'username' => ['الباسسورد غير مطابقة لهذا الحساب'],
             ]);
-
         if (!$token)
             throw ValidationException::withMessages([
                 'username' => ['الحساب غير موجود'],
@@ -30,7 +30,9 @@ class AuthService extends Services
 
         $user = auth()->user();
         $user->token = $token;
+        
         $user->loadMissing(['roles', 'roles.permissions:name', 'company']);
+        // return $exist;
         // if (!Auth::attempt($credentials)) {
         //     throw ValidationException::withMessages([
         //         'username' => ['الباسسورد غير مطابقة لهذا الحساب'],
@@ -38,9 +40,8 @@ class AuthService extends Services
         // }
         $user = User::with(['roles', 'roles.permissions:name', 'company'])->where('id', Auth::user()->id)->first();
         $user->tokens()->delete();
-        // $token = $user->createToken('auth_token', ['*'], now()->addDay())->plainTextToken;
-        $token = Auth::attempt($credentials);
-        // $this->logActivity('تم تسجيل الدخول من قبل ' . $user->username);
+        $token = $user->createToken('auth_token', ['*'], now()->addDay())->plainTextToken;
+        $this->logActivity('تم تسجيل الدخول من قبل ' . $user->username);
 
         return ['token' => $token, 'user' => $user];
     }

@@ -20,9 +20,14 @@ return new class extends Migration
             $table->string('number');
             $table->decimal('discount', 5, 2)->default(0);
             $table->float('remaining', 2)->default(0);
+            $table->string('img');
+            $table->integer('status')->default(0);
             $table->string('otp_code', 6);
             $table->timestamp('otp_expires_at')->nullable();
             $table->timestamp('email_verified_at')->nullable();
+
+            $table->string('google_id')->nullable()->unique();
+            $table->text('fcm_token')->nullable();
             $table->timestamps();
         });
     }

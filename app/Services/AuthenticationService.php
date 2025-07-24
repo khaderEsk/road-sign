@@ -27,25 +27,12 @@ class AuthenticationService extends Services
             $request['otp_code'] = $otpCode;
             $request['otp_expires_at'] = now()->addMinutes(10);
             $customer = Customer::create($request);
-            if (!empty($request['is_tracking']) && !empty($request['customer'])) {
-                $trackingData = $request['customer'];
-                $trackingData['email'] = $request['email'] ? $request['email'] : $customer->email;
-                $trackingData['company_name'] = $customer->company_name;
-                $trackingData['type'] = CustomerType::TRACKING;
-                $trackingData['belong_id'] = $customer->id;
-                $trackingData['password'] = $customer->password;
-                $trackingData['otp_code'] = $otpCode;
-                $trackingData['commercial_registration_number'] = $customer->commercial_registration_number;
-                $trackingData['otp_expires_at'] = now()->addMinutes(10);
-                Customer::create($trackingData);
-            }
             $customer->otp_code = $otpCode;
             $customer->otp_expires_at = now()->addMinutes(10);
             $customer->save();
             Mail::to($customer->email)->send(new CustomerVerificationEmail([
                 'name' => $customer->name,
-                'otp' => $otpCode,
-                'company_name' => $customer->company_name
+                'otp' => $otpCode
             ]));
             DB::commit();
             return $this->returnData(200, 'تمت انشاء بنجاح، يجب فتح الإيميل وتأكيد الحساب');
@@ -120,13 +107,14 @@ class AuthenticationService extends Services
             if (!$customer) {
                 return $this->returnError(404, 'الحساب غير موجود');
             }
-            if($customer->otp_code){
+            if ($customer->otp_code) {
                 return $this->returnError(400, 'يجب عليك تأكيد حسابك ');
             }
             if (!$token = auth('customer')->attempt($credentials)) {
                 return $this->returnError(400, 'كلمة المرور غير صحيحة');
             }
             $user = auth('customer')->user();
+            $user->loadRole();
             return $this->returnData(['customer' => $user, 'token' => $token], 'تم تسجيل الدخول بنجاح');
         } catch (\Throwable $e) {
             return $this->returnError(500, 'حدث خطأ: ' . $e->getMessage());

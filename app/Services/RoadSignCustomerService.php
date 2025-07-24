@@ -51,16 +51,9 @@ class RoadSignCustomerService extends Services
                         $query->where('customer_id', $customerId);
                     }]);
                 }, function ($q) {
-                    $q->selectRaw('*, 0 as is_favorite');
+                    $q->selectRaw('0 as is_favorite');
                 })
                 ->get();
-            // ->map(function ($item) use ($customerId) { 
-            //     return [
-            //         'latitudeX' => $item->latitudeX,
-            //         'longitudeY' => $item->longitudeY,
-            //         'is_favorite' => $customerId ? ($item->favorites->isNotEmpty() ? 1 : 0) : 0
-            //     ];
-            // });
 
             return $this->returnData($roadSigns, 'تمت العملية بنجاح');
         } catch (\Exception $e) {
