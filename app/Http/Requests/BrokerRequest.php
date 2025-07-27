@@ -25,6 +25,8 @@ class BrokerRequest extends FormRequest
             "full_name" => "required|string",
             "number" => "required|string",
             "discount" => "nullable|numeric|min:0|max:100",
+            'email' => 'required|string|email|max:100|unique:users',
+            'password' => 'required|string|min:6|regex:/[a-zA-Z]/',
         ];
     }
 }

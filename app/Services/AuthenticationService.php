@@ -5,7 +5,9 @@ namespace App\Services;
 use App\CustomerType;
 use App\GeneralTrait;
 use App\Mail\CustomerVerificationEmail;
+use App\Models\Broker;
 use App\Models\Customer;
+use App\Models\Role;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -102,20 +104,32 @@ class AuthenticationService extends Services
     public function login($request)
     {
         try {
-            $credentials = $request->only(['company_name', 'password']);
-            $customer = Customer::where('company_name', $credentials['company_name'])->first();
-            if (!$customer) {
+            $credentials = $request->only(['email', 'password']);
+
+            $broker = Broker::where('email', $credentials['email'])->first();
+            $customer = Customer::where('email', $credentials['email'])->first();
+
+            if (!$broker && !$customer) {
                 return $this->returnError(404, 'الحساب غير موجود');
             }
-            if ($customer->otp_code) {
-                return $this->returnError(400, 'يجب عليك تأكيد حسابك ');
+
+            $userType = $broker ? 'broker' : 'customer';
+            $user = $broker ?: $customer;
+
+            if ($userType === 'customer' && $user->otp_code) {
+                return $this->returnError(400, 'يجب عليك تأكيد حسابك');
             }
-            if (!$token = auth('customer')->attempt($credentials)) {
+
+            if (!$token = auth($userType)->attempt($credentials)) {
                 return $this->returnError(400, 'كلمة المرور غير صحيحة');
             }
-            $user = auth('customer')->user();
-            $user->loadRole();
-            return $this->returnData(['customer' => $user, 'token' => $token], 'تم تسجيل الدخول بنجاح');
+            $user->role = $userType;
+            $responseData = [
+                'user' => $user,
+                'token' => $token
+            ];
+
+            return $this->returnData($responseData, 'تم تسجيل الدخول بنجاح');
         } catch (\Throwable $e) {
             return $this->returnError(500, 'حدث خطأ: ' . $e->getMessage());
         }

@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('full_name');
             $table->string('number');
             $table->decimal('discount', 5, 2)->default(0);
+            $table->string('email');
+            $table->string('password');
             $table->timestamps();
         });
     }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Broker;
+use Spatie\Permission\Models\Role;
 
 class BrokerService extends Services
 {
@@ -19,6 +20,9 @@ class BrokerService extends Services
     public function create(array $data)
     {
         $broker = Broker::create($data);
+        $role = Role::where('name', '=', 'broker')->first();
+        $broker->assignRole($role);
+        $broker->loadMissing(['roles']);
         $this->logActivity('تم إنشاء الوسيط: ' . $broker->full_name . " بواسطة المستخدم: " . auth()->user()->username);
         return $broker;
     }
@@ -38,5 +42,4 @@ class BrokerService extends Services
         $broker->delete();
         return true;
     }
-
 }

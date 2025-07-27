@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\AuthenticationController;
 use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\BookingCustomerController;
+use App\Http\Controllers\Api\V1\Broker\BrokerClientController;
 use App\Http\Controllers\Api\V1\BrokerController;
 use App\Http\Controllers\Api\V1\CityController;
 use App\Http\Controllers\Api\V1\CompanyController;
@@ -76,7 +77,14 @@ Route::group(['prefix' => 'customer'], function () {
     Route::get('/index', [RoadSignCustomerController::class, 'index']);
 });
 
+Route::group(['prefix' => 'broker'], function () {
 
+
+    
+    Route::group(['middleware' => ['auth:broker', 'broker.role']], function () {
+        Route::get('/get-client', [BrokerClientController::class, 'index']);
+    });
+});
 
 Route::post('/password/code', [ForgetPasswordController::class, 'sendResetCode']);
 Route::post('/password/verify', [ForgetPasswordCustomerController::class, 'verifyCode']);

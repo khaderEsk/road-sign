@@ -26,7 +26,7 @@ class CustomerLoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'company_name' => 'required|string',
+            'email' => 'required|string|email',
             'password' => 'required|string',
         ];
     }

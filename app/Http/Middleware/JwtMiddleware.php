@@ -33,10 +33,8 @@ class JwtMiddleware extends BaseMiddleware
                 ], 401);
             }
 
-            // التحقق من صحة التوكن
             $payload = JWTAuth::setToken($token)->getPayload();
 
-            // البحث عن العميل في قاعدة البيانات
             $customer = Customer::find($payload['customer_id']);
 
             if (!$customer) {

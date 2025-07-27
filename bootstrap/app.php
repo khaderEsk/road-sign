@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'customer.role' => \App\Http\Middleware\CustomerRoleCheck::class,
             'jwt.verify' => \App\Http\Middleware\JwtMiddleware::class,
+            'broker.role' => \App\Http\Middleware\BrokerRoleChek::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
