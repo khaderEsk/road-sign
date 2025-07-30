@@ -10,14 +10,20 @@ class Template extends Model
     use HasFactory;
 
     protected $fillable = [
-        'model', 'type', 'size',
-        'advertising_space', 'printing_space',
-        'user_id', 'faces_number'
+        'model',
+        'type',
+        'size',
+        'advertising_space',
+        'printing_space',
+        'user_id',
+        'faces_number',
+        'appearance'
     ];
 
     protected $casts = [
-        'advertising_space' => 'double', 'printing_space' => 'double',
-        'faces_number'=>'integer'
+        'advertising_space' => 'double',
+        'printing_space' => 'double',
+        'faces_number' => 'integer'
     ];
 
     public function user()

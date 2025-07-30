@@ -21,6 +21,7 @@ return new class extends Migration
             // $table->decimal('printing_meter_price', 8, 2);
             // $table->decimal('advertising_meter_price', 8, 2);
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('appearance');
             $table->timestamps();
         });
     }

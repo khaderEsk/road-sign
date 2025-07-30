@@ -74,7 +74,7 @@ class AuthenticationService extends Services
             $customer->assignRole('customer');
             $customer->loadMissing(['roles']);
             DB::commit();
-            return $this->returnData(['customer' => $customer, 'token' => $token], 'تم تفعيل الحساب بنجاح!');
+            return $this->returnData(['user' => $customer, 'token' => $token], 'تم تفعيل الحساب بنجاح!');
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->returnError($e->getCode(), $e->getMessage());
@@ -173,10 +173,12 @@ class AuthenticationService extends Services
         DB::beginTransaction();
         try {
             $customer = auth('customer')->user();
+            if ($customer->status = 0 || $customer->status = 1) {
+                DB::rollBack();
+                return $this->returnError(400, 'يجب استكمال المعلومات أولاً.');
+            }
             $customer->update($data);
-            $customer->status = 1;
             $customer->save();
-            // return "yes";
             $customerTracking = $customer->customers()->first();
             if ($data['is_tracking'] == 1) {
                 if (isset($customerTracking)) {
@@ -201,7 +203,21 @@ class AuthenticationService extends Services
         }
     }
 
-
+    public function CompleteInformation(array $data)
+    {
+        DB::beginTransaction();
+        try {
+            $customer = auth('customer')->user();
+            $customer->update($data);
+            $customer->status = 1;
+            $customer->save();
+            DB::commit();
+            return $this->returnData(200, 'تحت تقديم طلب استكمال معلومات');
+        } catch (Exception $e) {
+            DB::rollBack();
+            return $this->returnError($e->getTraceAsString(), $e->getMessage());
+        }
+    }
     public function refresh()
     {
         try {

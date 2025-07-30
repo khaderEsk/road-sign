@@ -68,7 +68,7 @@ Route::group(['prefix' => 'customer'], function () {
 
         Route::get('/myProfile', [AuthenticationController::class, 'profile']);
         Route::post('/update-myProfile', [AuthenticationController::class, 'updateProfile']);
-
+        Route::post('/complete-information', [AuthenticationController::class, 'CompleteInformation']);
         //Reset Password
         Route::get('/resetPassword', [ResetPasswordCustomerController::class, 'resetPassword']);
         Route::post('/resetPassword/verify', [ResetPasswordCustomerController::class, 'verifyCodeRest']);
@@ -76,8 +76,8 @@ Route::group(['prefix' => 'customer'], function () {
         Route::get('/get-status', [AuthenticationController::class, 'getStatus']);
 
         Route::middleware(['auth:customer', 'check.customer.status'])->group(function () {
-            Route::apiResource('booking', BookingCustomerController::class);
             Route::post('get-calculate-Amount', [BookingCustomerController::class, 'calculateAmounts']);
+            Route::apiResource('booking', BookingCustomerController::class);
             Route::apiResource('payments', PaymentController::class);
         });
     });

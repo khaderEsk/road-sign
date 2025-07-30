@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\GeneralTrait;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CompleteInformationRequest;
 use App\Http\Requests\CustomerLoginRequest;
 use App\Http\Requests\CustomerRequest;
 use App\Http\Requests\RegisterCustomerRequest;
@@ -43,9 +44,18 @@ class AuthenticationController extends Controller
     public function updateProfile(UpdatedProfileCustomerRequest $request)
     {
         $data = $request->validated();
-        $data['img'] = $this->uploadImage($request, 'img', 'crn');
         return $this->authenticationService->UpdateProfile($data);
     }
+
+
+    public function CompleteInformation(CompleteInformationRequest $request)
+    {
+        $data = $request->validated();
+        $data['img'] = $this->uploadImage($request, 'img', 'crn');
+        return $this->authenticationService->CompleteInformation($data);
+    }
+
+
     public function verify(VerifyRequest $request)
     {
         return $this->authenticationService->verify($request->validated());

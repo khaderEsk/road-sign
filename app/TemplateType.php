@@ -4,6 +4,6 @@ namespace App;
 
 enum TemplateType: int
 {
-    case STATIC = 0;
+    case STATIC = 1;
     case DIGITAL = 2;
 }

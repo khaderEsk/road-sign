@@ -203,6 +203,7 @@ class BookingCustomerService extends Services
         $ss = DB::transaction(function () use ($data) {
             $amounts = $this->calculateAmount($data, $data['product_type']);
             $pivotData = $this->preparePivotData($data, $amounts['pricing_details']);
+            
             $this->checkAvailability($pivotData, $data['start_date'], $data['end_date']);
             $booking = Booking::create($data);
             $booking->roadsigns()->sync($pivotData);
@@ -296,15 +297,15 @@ class BookingCustomerService extends Services
     {
         $roadsigns = collect($data['roadsigns']);
         $pivotData = [];
-        foreach ($roadsigns as $roadsign) {
-            $roadSignId = $roadsign['road_sign_id'];
-            $startDate = $roadsign['start_date'];
-            $endDate = $roadsign['end_date'];
+        foreach ($roadsigns as $roadSign) {
+            $roadSignId = $roadSign['road_sign_id'];
+            $startDate = $roadSign['start_date'];
+            $endDate = $roadSign['end_date'];
             $pivotKey = $roadSignId . '_' . $startDate . '_' . $endDate;
             $pivotData[$pivotKey] = [
                 'road_sign_id' => $roadSignId,
-                'booking_faces' => $roadsign['booking_faces'],
-                'number_of_reserved_panels' => $roadsign['number_of_reserved_panels'],
+                'booking_faces' => $roadSign['booking_faces'],
+                'number_of_reserved_panels' => $roadSign['number_of_reserved_panels'],
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'face_price' => $pricingDetails[$pivotKey]['face_price'] ?? 0,

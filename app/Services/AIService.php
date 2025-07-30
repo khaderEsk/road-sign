@@ -56,10 +56,9 @@ class AIService extends Services
                 $roadSign->available_date_ranges = [];
                 $roadSign->booking_dates = [];
             }
-
+            $roadSign->is_favorite = $roadSign->favorite->isNotEmpty();
             return $roadSign;
         });
-
         return response()->json(
             [
                 'status' => true,

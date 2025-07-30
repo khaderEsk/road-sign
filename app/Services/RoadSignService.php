@@ -217,18 +217,26 @@ class RoadSignService extends Services
         $number_of_reserved_panels,
         $exclude_booking_id = null
     ) {
-        $road = RoadSign::with('bookings')->find($road_sign_id);
-
+        $road = RoadSign::with('bookings', 'template')->find($road_sign_id);
         if (!$road) {
             throw new HttpResponseException(response()->json([
                 'message' => 'اللوحة غير موجودة',
                 'road_sign_id' => $road_sign_id,
             ], 404));
         }
-
         $query = $road->bookings()
             ->wherePivot('start_date', '<=', $end_date)
             ->wherePivot('end_date', '>=', $start_date);
+
+        if ($road->template->appearance == 2) {
+            if (count($road->bookings) > 11) {
+                throw new HttpResponseException(response()->json([
+                    'message' => 'الوحة وصلت للحد الأقصى من الحجوزات',
+                    'road_sign_id' => count($road->bookings),
+                    'total_panels' => $road->panels_number,
+                ], 400));
+            }
+        }
 
         if ($exclude_booking_id) {
             $query->where('bookings.id', '!=', $exclude_booking_id);
@@ -239,22 +247,23 @@ class RoadSignService extends Services
 
         $available_faces = $road->faces_number - $sum_booking_faces;
         $available_panels = $road->panels_number - $sum_number_of_reserved_panels;
-
-        if ($number_of_reserved_panels > $available_panels) {
-            throw new HttpResponseException(response()->json([
-                'message' => "عدد اللوحات المطلوبة ({$number_of_reserved_panels}) أكثر من المتاح في الفترة المحددة. عدد لوحات المحجوزة حالياً: {$sum_number_of_reserved_panels} من أصل {$road->panels_number}",
-                'road_sign_id' => $road_sign_id,
-                'reserved_panels_in_period' => (int) $sum_number_of_reserved_panels,
-                'available_panels_in_period' => $available_panels,
-                'total_panels' => $road->panels_number,
-            ], 400));
-        }
-        if ($number_of_reserved_panels > $road->panels_number) {
-            throw new HttpResponseException(response()->json([
-                'message' => "عدد الوحات المطلوبة ({$number_of_reserved_panels})أكبر من عدد الوحات الكلي للوجه الواحد",
-                'road_sign_id' => $road_sign_id,
-                'total_number_of_reserved_panels' => $road->panels_number,
-            ], 400));
+        if ($road->template->appearance == 1) {
+            if ($number_of_reserved_panels > $available_panels) {
+                throw new HttpResponseException(response()->json([
+                    'message' => "عدد اللوحات المطلوبة ({$number_of_reserved_panels}) أكثر من المتاح في الفترة المحددة. عدد لوحات المحجوزة حالياً: {$sum_number_of_reserved_panels} من أصل {$road->panels_number}",
+                    'road_sign_id' => $road_sign_id,
+                    'reserved_panels_in_period' => (int) $sum_number_of_reserved_panels,
+                    'available_panels_in_period' => $available_panels,
+                    'total_panels' => $road->panels_number,
+                ], 400));
+            }
+            if ($number_of_reserved_panels > $road->panels_number) {
+                throw new HttpResponseException(response()->json([
+                    'message' => "عدد الوحات المطلوبة ({$number_of_reserved_panels})أكبر من عدد الوحات الكلي للوجه الواحد",
+                    'road_sign_id' => $road_sign_id,
+                    'total_number_of_reserved_panels' => $road->panels_number,
+                ], 400));
+            }
         }
     }
 
