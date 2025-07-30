@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Broker extends Authenticatable implements JWTSubject
 {
@@ -17,7 +17,8 @@ class Broker extends Authenticatable implements JWTSubject
         'number',
         'discount',
         'email',
-        'password'
+        'password',
+        'wallet'
     ];
 
     protected function casts(): array
@@ -29,6 +30,17 @@ class Broker extends Authenticatable implements JWTSubject
     protected $hidden = [
         'password',
     ];
+
+
+    public function customer(): HasMany
+    {
+        return $this->hasMany(Customer::class);
+    }
+
+    public function transformation(): HasMany
+    {
+        return $this->hasMany(Transformation::class);
+    }
 
     public function getJWTIdentifier()
     {

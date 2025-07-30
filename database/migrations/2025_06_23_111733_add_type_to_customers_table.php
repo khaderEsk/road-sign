@@ -15,6 +15,8 @@ return new class extends Migration
         Schema::table('customers', function (Blueprint $table) {
             $table->unsignedTinyInteger('type')->default(CustomerType::OWNER);
             $table->text('alt_phone_number')->nullable();
+            $table->foreignId('broker_id')->nullable()->constrained('brokers')->onDelete('cascade');
+            $table->foreignId('admin_id')->nullable()->constrained('users')->onDelete('cascade');
         });
     }
 
@@ -24,7 +26,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('customers', function (Blueprint $table) {
-            $table->dropColumn(['type','alt_phone_number']);
+            $table->dropColumn(['type', 'alt_phone_number', 'broker_id', 'admin_id']);
         });
     }
 };

@@ -12,39 +12,15 @@ use Laravel\Socialite\Facades\Socialite;
 
 class GoogleController extends Controller
 {
-    use GeneralTrait;
-    public function redirectToGoogle()
+    public function googleLogin()
     {
-        $redirectUrl = Socialite::driver('google')
-            ->stateless()
-            ->redirect()
-            ->getTargetUrl();
-        return response()->json(['url' => $redirectUrl]);
+        return Socialite::driver('google')->stateless()->redirect();
     }
 
-
-    public function handleGoogleCallback(Request $request)
+    public function googleLoginCallback()
     {
-        try {
-            if (!$request->has('code')) {
-                return response()->json([
-                    'error' => 'Invalid request',
-                    'message' => 'Authorization code not found'
-                ], 400);
-            }
-
-            $googleUser = Socialite::driver('google')
-                ->stateless()
-                ->user();
-
-            // باقي الكود كما هو...
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Google authentication failed',
-                'message' => $e->getMessage(),
-                'details' => $request->all() // لأغراض debugging
-            ], 401);
-        }
+        $googleUser = Socialite::driver('google')->stateless()->user();
+        return "user";
+        dd($googleUser);
     }
 }

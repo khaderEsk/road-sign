@@ -88,14 +88,11 @@ class RoadSignService extends Services
         $availableDateRanges = [];
         $currentStart = null;
         $currentAvailable = null;
-
         for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
             $key = $date->toDateString();
             $reserved = $dailyReservedPanels[$key] ?? 0;
             $available = max(0, $roadSign->panels_number - $reserved);
-
             if ($available <= 0) {
-
                 if ($currentStart !== null) {
                     $availableDateRanges[] = [
                         'start_date' => $currentStart->toDateString(),
@@ -108,12 +105,10 @@ class RoadSignService extends Services
                 }
                 continue;
             }
-
             if ($currentStart === null) {
                 $currentStart = $date->copy();
                 $currentAvailable = $available;
             } elseif ($available !== $currentAvailable) {
-
                 $availableDateRanges[] = [
                     'start_date' => $currentStart->toDateString(),
                     'end_date' => $date->copy()->subDay()->toDateString(),
@@ -124,7 +119,6 @@ class RoadSignService extends Services
                 $currentAvailable = $available;
             }
         }
-
         if ($currentStart !== null) {
             $availableDateRanges[] = [
                 'start_date' => $currentStart->toDateString(),
@@ -133,14 +127,11 @@ class RoadSignService extends Services
                 'available_panels' => $currentAvailable
             ];
         }
-
         $bookingRanges = collect($roadSign->bookings)->map(function ($booking) use ($start, $end) {
             $from = Carbon::parse($booking->pivot->start_date)->startOfDay();
             $to = Carbon::parse($booking->pivot->end_date)->endOfDay();
-
             $effectiveStart = $from->greaterThan($start) ? $from : $start;
             $effectiveEnd = $to->lessThan($end) ? $to : $end;
-
             return [
                 'start_date' => $effectiveStart->toDateString(),
                 'end_date' => $effectiveEnd->toDateString(),

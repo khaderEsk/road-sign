@@ -37,6 +37,8 @@ class Customer extends Authenticatable implements JWTSubject
         'img',
         'google_id',
         'fcm_token',
+        'broker_id',
+        'admin_id'
     ];
     protected $appends = [
         'total',
@@ -52,6 +54,14 @@ class Customer extends Authenticatable implements JWTSubject
         'otp_expires_at' => 'datetime',
     ];
 
+    public function broker()
+    {
+        return $this->belongsTo(Broker::class);
+    }
+    public function admin()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function contracts()
     {

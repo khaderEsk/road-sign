@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'customer.role' => \App\Http\Middleware\CustomerRoleCheck::class,
             'jwt.verify' => \App\Http\Middleware\JwtMiddleware::class,
             'broker.role' => \App\Http\Middleware\BrokerRoleChek::class,
+            'check.customer.status' => \App\Http\Middleware\EnsureCustomerStatusIsConfirmed::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

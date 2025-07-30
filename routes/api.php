@@ -33,6 +33,10 @@ use App\Http\Controllers\SYRController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
+
+// Route::get('/google', [GoogleController::class, 'redirect']);
+// Route::get('/google/callback', [GoogleController::class, 'callback']);
+
 Route::group(['prefix' => 'customer'], function () {
     Route::post('/register', [AuthenticationController::class, 'register']);
     Route::post('/login', [AuthenticationController::class, 'login']);
@@ -40,8 +44,7 @@ Route::group(['prefix' => 'customer'], function () {
     Route::post('/resend-otp', [AuthenticationController::class, 'resendOtp']);
     Route::post('/logout', [AuthenticationController::class, 'logout']);
 
-    Route::get('/login/google', [GoogleController::class, 'redirectToGoogle']);
-    Route::get('/login/google/callback', [GoogleController::class, 'handleGoogleCallback']);
+
 
     //forget Password
     Route::post('/password/code', [ForgetPasswordCustomerController::class, 'sendResetCode']);
@@ -59,30 +62,41 @@ Route::group(['prefix' => 'customer'], function () {
 
 
 
+    Route::get('/refresh', [AuthenticationController::class, 'refresh']);
     Route::group(['middleware' => ['auth:customer', 'customer.role']], function () {
-        Route::get('/refresh', [AuthenticationController::class, 'refresh']);
-
         Route::apiResource('favorite', FavoriteController::class);
 
         Route::get('/myProfile', [AuthenticationController::class, 'profile']);
         Route::post('/update-myProfile', [AuthenticationController::class, 'updateProfile']);
-        Route::apiResource('booking', BookingCustomerController::class);
-        Route::post('get-calculate-Amount', [BookingCustomerController::class, 'calculateAmounts']);
-        Route::apiResource('payments', PaymentController::class);
+
         //Reset Password
         Route::get('/resetPassword', [ResetPasswordCustomerController::class, 'resetPassword']);
         Route::post('/resetPassword/verify', [ResetPasswordCustomerController::class, 'verifyCodeRest']);
         Route::post('/resetPassword/updated', [ResetPasswordCustomerController::class, 'updatedPassword']);
+        Route::get('/get-status', [AuthenticationController::class, 'getStatus']);
+
+        Route::middleware(['auth:customer', 'check.customer.status'])->group(function () {
+            Route::apiResource('booking', BookingCustomerController::class);
+            Route::post('get-calculate-Amount', [BookingCustomerController::class, 'calculateAmounts']);
+            Route::apiResource('payments', PaymentController::class);
+        });
     });
     Route::get('/index', [RoadSignCustomerController::class, 'index']);
 });
 
 Route::group(['prefix' => 'broker'], function () {
-
-
-    
     Route::group(['middleware' => ['auth:broker', 'broker.role']], function () {
         Route::get('/get-client', [BrokerClientController::class, 'index']);
+        Route::post('/add-client', [BrokerClientController::class, 'store']);
+        Route::get('/get-client/{id}', [BrokerClientController::class, 'show']);
+        Route::get('/get-client-Payment/{id}', [BrokerClientController::class, 'getPayment']);
+        Route::get('/get-profile', [BrokerClientController::class, 'profile']);
+        Route::post('/payment', [BrokerClientController::class, 'payment']);
+        Route::get('/get-transformation', [BrokerClientController::class, 'transformation']);
+
+
+        Route::post('get-calculate-Amount', [BrokerClientController::class, 'calculateAmounts']);
+        Route::post('booking', [BrokerClientController::class, 'booking']);
     });
 });
 

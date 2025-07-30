@@ -26,6 +26,7 @@ class BookingCustomerController extends Controller
 
     public function store(BookingCustomerRequest $request)
     {
+        
         return response()->json($this->bookingCustomerService->create($request->validated()));
     }
 

@@ -8,7 +8,9 @@ use App\Http\Requests\CustomerLoginRequest;
 use App\Http\Requests\CustomerRequest;
 use App\Http\Requests\RegisterCustomerRequest;
 use App\Http\Requests\ResendVerifyRequest;
+use App\Http\Requests\UpdatedProfileCustomerRequest;
 use App\Http\Requests\VerifyRequest;
+use App\ImageTrait;
 use App\Services\AuthenticationService;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -16,6 +18,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 class AuthenticationController extends Controller
 {
     use GeneralTrait;
+    use ImageTrait;
     public function __construct(protected AuthenticationService $authenticationService) {}
 
     public function register(RegisterCustomerRequest $request)
@@ -37,9 +40,11 @@ class AuthenticationController extends Controller
         return $this->authenticationService->profile();
     }
 
-    public function updateProfile(CustomerRequest $request)
+    public function updateProfile(UpdatedProfileCustomerRequest $request)
     {
-        return $this->authenticationService->UpdateProfile($request->validated());
+        $data = $request->validated();
+        $data['img'] = $this->uploadImage($request, 'img', 'crn');
+        return $this->authenticationService->UpdateProfile($data);
     }
     public function verify(VerifyRequest $request)
     {
@@ -52,12 +57,16 @@ class AuthenticationController extends Controller
     }
     public function refresh()
     {
-        // return "yes";
         try {
             $newToken = JWTAuth::parseToken()->refresh();
             return $this->returnData(['token' => $newToken], 'تمت العملية بنجاح');
         } catch (\Throwable $e) {
             return $this->returnError(500, 'حدث خطأ: ' . $e->getMessage());
         }
+    }
+
+    public function getStatus()
+    {
+        return $this->authenticationService->getStatus();
     }
 }

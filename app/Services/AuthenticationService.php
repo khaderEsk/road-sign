@@ -63,7 +63,7 @@ class AuthenticationService extends Services
             $customer->otp_expires_at = null;
             $customer->save();
             $credentials = [
-                'company_name' => $customer->company_name,
+                'email' => $customer->email,
                 'password' => $request['password']
             ];
             $token = auth('customer')->attempt($credentials);
@@ -146,7 +146,7 @@ class AuthenticationService extends Services
                 return $this->returnError($e->getCode(), 'الحساب تم تسجيل الخروج منه');
             }
         } else {
-            return $this->returnError("400", 'some thing went wrongs');
+            return $this->returnError(401, 'some thing went wrongs');
         }
     }
 
@@ -174,8 +174,9 @@ class AuthenticationService extends Services
         try {
             $customer = auth('customer')->user();
             $customer->update($data);
+            $customer->status = 1;
             $customer->save();
-            $customer->password = Hash::make($data['password']);
+            // return "yes";
             $customerTracking = $customer->customers()->first();
             if ($data['is_tracking'] == 1) {
                 if (isset($customerTracking)) {
@@ -185,7 +186,6 @@ class AuthenticationService extends Services
                     $customerTrackings->company_name = $customer->company_name;
                     $customerTrackings->type = CustomerType::TRACKING;
                     $customerTrackings->belong_id = $customer->id;
-                    $customerTrackings->password = Hash::make(Str::random(10));
                     $customerTrackings->save();
                 }
             } else {
@@ -219,5 +219,23 @@ class AuthenticationService extends Services
             'token_type' => 'bearer',
             'expires_in' => auth('customer')->factory()->getTTL() * 60
         ], 200);
+    }
+
+
+    public function getStatus()
+    {
+        try {
+            $customer = auth('customer')->user();
+            if (!$customer) {
+                return $this->returnError(401, 'العميل غير مسجل الدخول');
+            }
+            return match ($customer->status) {
+                1 => $this->returnError(400, 'طلبك قيد المعالجة'),
+                0 => $this->returnError(400, 'يجب اكمال الابيانات اولا'),
+                default => $this->returnError(['status' => $customer->status], 'حسابك مؤكد'),
+            };
+        } catch (\Throwable $e) {
+            return $this->returnError($e->getCode(), $e->getMessage());
+        }
     }
 }

@@ -2,26 +2,15 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use App\BookingType;
 use App\DiscountType;
-use App\GeneralTrait;
 use App\ProductType;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
-class BookingCustomerRequest extends FormRequest
+class BookingBrokerRequest extends FormRequest
 {
-    use GeneralTrait;
-    protected function prepareForValidation()
-    {
-        $this->merge([
-            'user_id' => 2,
-            'customer_id' => auth('customer')->user()->id,
-            'type' => 2
-        ]);
-    }
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -38,7 +27,7 @@ class BookingCustomerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => 'required|exists:users,id',
+            'broker_id' => 'exists:brokers,id',
             'customer_id' => 'required|exists:customers,id',
             'type' => ['required', Rule::in(BookingType::cases())],
             'start_date' => 'required|date|after:today',
@@ -66,11 +55,6 @@ class BookingCustomerRequest extends FormRequest
                     }
                 }
             ],
-
         ];
-    }
-    public function failedValidation(Validator $validator)
-    {
-        throw new HttpResponseException($this->returnValidationError('422', $validator));
     }
 }

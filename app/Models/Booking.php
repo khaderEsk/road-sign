@@ -30,6 +30,7 @@ class Booking extends Model
         'total_price_befor_discount',
         'units',
         'status',
+        'broker_id',
 
     ];
     protected $casts = [
@@ -64,6 +65,9 @@ class Booking extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function brokers(){
+        return $this->belongsTo(Broker::class);
+    }
 
     public function roadsigns()
     {

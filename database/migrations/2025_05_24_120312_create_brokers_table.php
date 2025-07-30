@@ -18,6 +18,7 @@ return new class extends Migration
             $table->decimal('discount', 5, 2)->default(0);
             $table->string('email');
             $table->string('password');
+            $table->bigInteger('wallet')->default(0);
             $table->timestamps();
         });
     }

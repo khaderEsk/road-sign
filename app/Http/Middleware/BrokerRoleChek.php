@@ -2,12 +2,14 @@
 
 namespace App\Http\Middleware;
 
+use App\GeneralTrait;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class BrokerRoleChek
 {
+    use GeneralTrait;
     /**
      * Handle an incoming request.
      *
@@ -17,6 +19,9 @@ class BrokerRoleChek
     {
         if (auth('broker')->check()) {
             $user = auth('broker')->user();
+            if (!$user) {
+                return $this->returnError(403, 'لا تملك dsdad المناسبة');
+            }
             if ($user->hasRole('broker')) {
                 return $next($request);
             }

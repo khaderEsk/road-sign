@@ -28,8 +28,12 @@ class BookingCustomerService extends Services
             if (!$customer) {
                 return $this->returnError(503, 'خطأ في المصادقة');
             }
+            if ($customer->status == 1) {
+                return $this->returnData(['status' => $customer->status], 'طلبك قيد المعالجة');
+            } elseif ($customer->status == 0) {
+                return $this->returnData(['status' => $customer->status], 'يجب تأكيد حسابك');
+            }
             $customer->load(['bookings.roadSigns', 'bookings.roadSigns.city', 'bookings.roadSigns.region', 'bookings.roadSigns.template', 'bookings.roadSigns.template.products']);
-
             $bookings = $customer->getRelation('bookings');
             return $this->returnData($bookings, 'تمت العملية بنجاح');
         } catch (\Throwable $e) {
@@ -47,7 +51,8 @@ class BookingCustomerService extends Services
             $booking = Booking::with([
                 'roadSigns.city',
                 'roadSigns.region',
-                'roadSigns.template.products'
+                'roadSigns.template.products',
+                'customer'
             ])->find($id);
             if (!$booking) {
                 return $this->returnError(404, 'الحجز غير موجود');
@@ -55,7 +60,6 @@ class BookingCustomerService extends Services
             if ($booking->customer_id != $customer->id) {
                 return $this->returnError(404, 'الحجز ليس لك');
             }
-
             foreach ($booking->roadsigns as $roadSign) {
                 $roadSign->total_faces_on_date = $roadSign->bookings->sum(function ($relatedBooking) {
                     return $relatedBooking->pivot->booking_faces ?? 0;
@@ -66,7 +70,6 @@ class BookingCustomerService extends Services
             }
             $startDate = $booking->start_date;
             $endDate = $booking->end_date;
-
             $groupedTemplates = $booking->roadsigns
                 ->groupBy(function ($roadSign) {
                     return $roadSign->template->model ?? 'unknown';
@@ -83,7 +86,6 @@ class BookingCustomerService extends Services
                                 return $relatedBooking->pivot->number_of_reserved_panels ?? 0;
                             });
                     });
-
                     return [
                         'model' => $model,
                         'total_faces' => $totalFaces,
@@ -294,14 +296,11 @@ class BookingCustomerService extends Services
     {
         $roadsigns = collect($data['roadsigns']);
         $pivotData = [];
-
         foreach ($roadsigns as $roadsign) {
             $roadSignId = $roadsign['road_sign_id'];
             $startDate = $roadsign['start_date'];
             $endDate = $roadsign['end_date'];
-
             $pivotKey = $roadSignId . '_' . $startDate . '_' . $endDate;
-
             $pivotData[$pivotKey] = [
                 'road_sign_id' => $roadSignId,
                 'booking_faces' => $roadsign['booking_faces'],
@@ -314,7 +313,6 @@ class BookingCustomerService extends Services
                 'total_faces_price' => $pricingDetails[$pivotKey]['total_faces_price'] ?? 0,
             ];
         }
-
         return $pivotData;
     }
 
